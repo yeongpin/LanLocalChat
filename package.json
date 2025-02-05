@@ -1,0 +1,29 @@
+{
+  "name": "lan-chat",
+  "version": "1.0.0",
+  "description": "LAN Chat Application",
+  "main": "server/server.js",
+  "scripts": {
+    "server": "nodemon server/server.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^0.26.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.17.1",
+    "multer": "^1.4.4",
+    "socket.io": "^4.4.1",
+    "socket.io-client": "^4.4.1",
+    "uuid": "^9.0.1",
+    "vue": "^3.2.31"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.6.2",
+    "nodemon": "^2.0.22",
+    "vite": "^4.5.9",
+    "dotenv": "^16.0.3"
+  }
+}
