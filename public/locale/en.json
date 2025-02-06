@@ -1,0 +1,48 @@
+{
+  "app": {
+    "title": "LAN Chat"
+  },
+  "chat": {
+    "placeholder": "Enter message...",
+    "send": "Send",
+    "attach": "Attach file",
+    "mention": "Mention user",
+    "fileLimit": "You can only upload 3 files at once",
+    "uploadFailed": "File upload failed",
+    "loadHistory": "Load chat history"
+  },
+  "user": {
+    "join": "joined the chat",
+    "leave": "left the chat",
+    "changeName": "Change name",
+    "nameError": "Username cannot be empty",
+    "nameExists": "This username is already taken",
+    "online": "Online Users",
+    "you": "(you)"
+  },
+  "notification": {
+    "mentioned": "mentioned you"
+  },
+  "theme": {
+    "light": "Light mode",
+    "dark": "Dark mode"
+  },
+  "language": {
+    "en": "English",
+    "zh_tw": "繁體中文"
+  },
+  "login": {
+    "title": "Update Username",
+    "username": "Username",
+    "join": "Join",
+    "update": "Update",
+    "cancel": "Cancel"
+  },
+  "message": {
+    "loadHistory": "Load History",
+    "systemJoin": "joined the chat",
+    "systemLeave": "left the chat",
+    "download": "Download",
+    "preview": "Preview"
+  }
+} 

@@ -18,10 +18,10 @@
     <div class="input-controls">
       <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none">
       <div class="action-buttons">
-        <button class="attach-btn" @click="handleAttachClick">
+        <button class="attach-btn" @click="handleAttachClick" :title="t('chat.attach')">
           <i class="fas fa-paperclip"></i>
         </button>
-        <button class="mention-btn" @click="insertMentionSymbol">
+        <button class="mention-btn" @click="insertMentionSymbol" :title="t('chat.mention')">
           <i class="fas fa-at"></i>
         </button>
       </div>
@@ -30,11 +30,11 @@
         @keydown.enter.exact.prevent="sendMessage"
         @keydown="handleKeydown"
         @input="onInput"
-        placeholder="輸入消息..."
+        :placeholder="t('chat.placeholder')"
         rows="1"
         ref="messageInput"
       ></textarea>
-      <button class="send-btn" @click="sendMessage">
+      <button class="send-btn" @click="sendMessage" :title="t('chat.send')">
         <i class="fas fa-paper-plane"></i>
       </button>
     </div>
@@ -54,6 +54,7 @@
 <script>
 import axios from 'axios';
 import FileCard from './FileCard.vue';
+import { t } from '../utils/i18n';
 
 export default {
   name: 'ChatInput',
@@ -64,6 +65,20 @@ export default {
     users: {
       type: Array,
       required: true
+    },
+    localeData: {
+      type: Object,
+      required: false,
+      default: () => ({
+        chat: {
+          placeholder: '輸入消息...',
+          send: '發送',
+          attach: '附加文件',
+          mention: '提及用戶',
+          fileLimit: '最多只能同時上傳3個文件',
+          uploadFailed: '文件上傳失敗'
+        }
+      })
     }
   },
   data() {
@@ -98,9 +113,18 @@ export default {
     });
   },
   methods: {
+    t(path) {
+      try {
+        const value = path.split('.').reduce((acc, part) => acc && acc[part], this.localeData);
+        return value || path;
+      } catch (error) {
+        console.warn(`Translation not found for: ${path}`);
+        return path;
+      }
+    },
     handleAttachClick() {
       if (this.uploadingFiles.length >= 3) {
-        alert('最多只能同時上傳3個文件');
+        alert(this.t('chat.fileLimit'));
         return;
       }
       this.$refs.fileInput.click();
@@ -110,6 +134,18 @@ export default {
       if (!file) return;
       this.uploadingFiles.push(file);
       this.$refs.fileInput.value = ''; // 重置 input
+      try {
+        const response = await axios.post('/upload', new FormData(event.target));
+        this.$emit('send-message', {
+          type: 'file',
+          name: file.name,
+          size: file.size,
+          path: response.data.path
+        });
+      } catch (error) {
+        console.error('File upload failed:', error);
+        alert(this.t('chat.uploadFailed'));
+      }
     },
     removeFile(index) {
       this.uploadingFiles.splice(index, 1);
@@ -139,7 +175,7 @@ export default {
             });
           } catch (error) {
             console.error('File upload failed:', error);
-            alert('文件上傳失敗');
+            alert(this.t('chat.uploadFailed'));
           }
         }
         this.uploadingFiles = [];

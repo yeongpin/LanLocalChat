@@ -1,0 +1,50 @@
+{
+  "app": {
+    "title": "局域網聊天應用"
+  },
+  "chat": {
+    "placeholder": "輸入消息...",
+    "send": "發送",
+    "attach": "附加文件",
+    "mention": "提及用戶",
+    "fileLimit": "最多只能同時上傳3個文件",
+    "uploadFailed": "文件上傳失敗",
+    "loadHistory": "載入歷史消息"
+  },
+  "user": {
+    "join": "加入了聊天室",
+    "leave": "離開了聊天室",
+    "changeName": "更改名稱",
+    "nameError": "用戶名不能為空",
+    "nameExists": "此用戶名已被使用",
+    "online": "在線用戶",
+    "you": "(你)"
+  },
+  "notification": {
+    "mentioned": "提到了你"
+  },
+  "theme": {
+    "light": "淺色模式",
+    "dark": "深色模式"
+  },
+  "language": {
+    "en": "English",
+    "zh_tw": "繁體中文"
+  },
+  "login": {
+    "title": "更新用戶名",
+    "username": "用戶名",
+    "join": "加入",
+    "update": "更新",
+    "cancel": "取消"
+
+
+  },
+  "message": {
+    "loadHistory": "載入歷史消息",
+    "systemJoin": "加入了聊天室",
+    "systemLeave": "離開了聊天室",
+    "download": "下載",
+    "preview": "預覽"
+  }
+} 

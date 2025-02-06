@@ -3,14 +3,14 @@
     <button class="close-btn" @click="$emit('close')">
       <i class="fas fa-times"></i>
     </button>
-    <h2>修改用戶名</h2>
+    <h2>{{ t('login.title') }}</h2>
     <input 
       v-model="inputUsername" 
       @keyup.enter="handleJoin" 
       placeholder="輸入用戶名"
       ref="usernameInput"
     >
-    <button @click="handleJoin">更新</button>
+    <button @click="handleJoin">{{ t('login.update') }}</button>
   </div>
 </template>
 
@@ -21,6 +21,18 @@ export default {
     currentUsername: {
       type: String,
       required: true
+    },
+    localeData: {
+      type: Object,
+      required: false,
+      default: () => ({
+        login: {
+          title: '加入聊天室',
+          username: '用戶名',
+          join: '加入',
+          cancel: '取消'
+        }
+      })
     }
   },
   data() {
@@ -33,6 +45,10 @@ export default {
     this.$refs.usernameInput.select();
   },
   methods: {
+    t(path) {
+      if (!this.localeData) return path;
+      return path.split('.').reduce((acc, part) => acc && acc[part], this.localeData) || path;
+    },
     handleJoin() {
       const trimmedUsername = this.inputUsername.trim();
       if (trimmedUsername) {

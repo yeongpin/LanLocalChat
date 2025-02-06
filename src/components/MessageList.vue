@@ -1,8 +1,9 @@
 <template>
   <div class="chat-messages" ref="messageContainer">
     <div v-if="showHistoryButton" class="load-history">
-      <button @click="loadHistory" class="history-btn">
-        <i class="fas fa-history"></i> 載入歷史消息
+      <button @click="loadHistory" class="history-btn" :title="t('message.loadHistory')">
+        <i class="fas fa-history"></i>
+        {{ t('message.loadHistory') }}
       </button>
     </div>
     <div v-for="(msg, index) in messages" :key="index" :class="msg.type">
@@ -11,7 +12,7 @@
           <template v-if="msg.highlight">
             {{ msg.content.split(msg.highlight)[0] }}
             <span class="highlight">{{ msg.highlight }}</span>
-            {{ msg.content.split(msg.highlight)[1] }}
+            {{ t(msg.action === 'join' ? 'message.systemJoin' : 'message.systemLeave') }}
           </template>
           <template v-else>{{ msg.content }}</template>
         </div>
@@ -56,6 +57,19 @@ export default {
     messages: {
       type: Array,
       required: true
+    },
+    localeData: {
+      type: Object,
+      required: false,
+      default: () => ({
+        message: {
+          loadHistory: '載入歷史消息',
+          systemJoin: '加入了聊天室',
+          systemLeave: '離開了聊天室',
+          download: '下載',
+          preview: '預覽'
+        }
+      })
     }
   },
   components: {
@@ -75,6 +89,10 @@ export default {
   },
   emits: ['load-history'],
   methods: {
+    t(path) {
+      if (!this.localeData) return path;
+      return path.split('.').reduce((acc, part) => acc && acc[part], this.localeData) || path;
+    },
     loadHistory() {
       this.$emit('load-history');
       this.hasLoadedHistory = true;

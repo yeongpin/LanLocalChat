@@ -1,6 +1,20 @@
 <template>
   <div class="chat-container">
     <div class="floating-container">
+      <button class="floating-button" @click="toggleLanguageMenu">
+        <i class="fas fa-globe"></i>
+      </button>
+      <div v-if="showLanguageMenu" class="language-menu">
+        <div 
+          v-for="lang in ['en', 'zh_tw']" 
+          :key="lang"
+          class="language-item"
+          :class="{ active: currentLocale === lang }"
+          @click="setLocale(lang)"
+        >
+          {{ localeData?.language[lang] }}
+        </div>
+      </div>
       <button class="floating-button" @click="toggleTheme">
         <i :class="isDarkTheme ? 'fas fa-sun' : 'fas fa-moon'"></i>
       </button>
@@ -9,15 +23,18 @@
       <message-list 
         :messages="messages"
         @load-history="loadHistory" 
+        :localeData="localeData"
       />
       <user-list 
         :users="onlineUsers" 
         :current-user="username"
         @show-name-editor="showNameEditor" 
+        :localeData="localeData"
       />
       <chat-input 
         @send-message="handleSendMessage" 
         :users="filteredUsers"
+        :localeData="localeData"
       />
     </div>
     <div v-if="showNameForm" class="modal-overlay">
@@ -26,6 +43,7 @@
         @join="handleJoin"
         @close="showNameForm = false"
         :currentUsername="username"
+        :localeData="localeData"
       />
     </div>
   </div>
@@ -56,6 +74,23 @@ export default {
       onlineUsers: [],
       showNameForm: false,
       isDarkTheme: true,
+      currentLocale: 'zh_tw',
+      localeData: {
+        chat: {
+          placeholder: '輸入消息...',
+          send: '發送',
+          attach: '附加文件',
+          mention: '提及用戶',
+          fileLimit: '最多只能同時上傳3個文件',
+          uploadFailed: '文件上傳失敗'
+        },
+        language: {
+          en: 'English',
+          zh_tw: '繁體中文'
+        }
+      },
+      showLanguageMenu: false,
+      isConnected: false
     };
   },
   computed: {
@@ -63,10 +98,20 @@ export default {
       return this.onlineUsers.filter(user => user !== this.username);
     }
   },
-  mounted() {
+  async mounted() {
     const serverUrl = `http://${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT || 13000}`;
     this.socket = io(serverUrl);
     this.setupSocketListeners();
+    
+    // 從 localStorage 獲取語言設置
+    const savedLocale = localStorage.getItem('locale') || 'zh_tw';
+    try {
+      await this.setLocale(savedLocale);
+    } catch (error) {
+      console.error('Failed to load initial locale:', error);
+      // 使用默認值，不再嘗試重新加載
+      console.warn('Using default translations');
+    }
     
     // 從 localStorage 獲取用戶名
     const savedUsername = localStorage.getItem('username');
@@ -74,17 +119,68 @@ export default {
       this.username = savedUsername;
     }
     
-    // 確保連接成功後再發送加入消息
+    // 處理重連邏輯
     this.socket.on('connect', () => {
-      this.socket.emit('join', this.username);
+      console.log('Connected to server');
+      this.isConnected = true;
+      if (this.username) {
+        this.socket.emit('join', this.username);
+      }
     });
+    
+    this.socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      this.isConnected = false;
+    });
+    
+    // 定期檢查連接狀態
+    setInterval(() => {
+      if (!this.isConnected) {
+        console.log('Attempting to reconnect...');
+        this.socket.connect();
+      }
+    }, 5000);
     
     // 初始化主題
     const theme = localStorage.getItem('theme') || 'light';
     this.setTheme(theme);
   },
   methods: {
+    async setLocale(locale) {
+      try {
+        const response = await fetch(`/locale/${locale}.json`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        this.localeData = await response.json();
+        this.currentLocale = locale;
+        localStorage.setItem('locale', locale);
+        
+        // 更新所有需要翻譯的文本
+        this.updateAllTranslations();
+        
+        // 關閉語言選單
+        this.showLanguageMenu = false;
+      } catch (error) {
+        console.error('Failed to load locale:', error);
+        throw error;
+      }
+    },
+    updateAllTranslations() {
+      // 這裡可以添加需要即時更新的文本
+      // 例如：更新頁面標題
+      document.title = this.t('app.title') || 'LAN Chat';
+    },
+    t(path) {
+      return path.split('.').reduce((acc, part) => acc && acc[part], this.localeData) || path;
+    },
+    toggleLanguageMenu() {
+      this.showLanguageMenu = !this.showLanguageMenu;
+    },
     setupSocketListeners() {
+      // 清理舊的監聽器
+      this.socket.removeAllListeners();
+      
       this.socket.on('message', (msg) => {
         this.messages.push(msg);
       });
@@ -104,38 +200,41 @@ export default {
       });
 
       this.socket.on('mentioned', (data) => {
-        // 播放提示音
         this.playNotificationSound();
         
-        // 如果瀏覽器支持通知且用戶已授權
-        if (Notification.permission === "granted") {
-          new Notification(`${data.from} 提到了你`, {
-            body: data.message,
-            icon: './public/favicon.ico'
-          });
+        this.showNotification(data);
+      });
+    },
+    async showNotification(data) {
+      if (!("Notification" in window)) return;
+      
+      if (Notification.permission === "granted") {
+        this.createNotification(data);
+      } else if (Notification.permission !== "denied") {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          this.createNotification(data);
         }
-        // 如果用戶未決定是否允許通知
-
-        else if (Notification.permission !== "denied") {
-          Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-              new Notification(`${data.from} 提到了你`, {
-                body: data.message,
-                icon: './public/favicon.ico'
-              });
-            }
-          });
-        }
+      }
+    },
+    createNotification(data) {
+      new Notification(`${data.from} 提到了你`, {
+        body: data.message,
+        icon: './public/favicon.ico',
+        tag: 'mention',  // 防止重複通知
+        renotify: true   // 允許重複通知
       });
     },
     handleJoin(username) {
       if (!username.trim()) {
-        alert('用戶名不能為空');
+        alert(this.t('user.nameError'));
         return;
       }
       this.username = username;
       localStorage.setItem('username', username);
-      this.socket.emit('join', this.username);
+      if (this.isConnected) {
+        this.socket.emit('join', this.username);
+      }
       this.showNameForm = false;
     },
     handleSendMessage(message) {
@@ -255,5 +354,54 @@ body {
 .floating-button:hover {
   background-color: var(--hover-color);
   transform: scale(1.1);
+}
+
+.language-menu {
+  position: absolute;
+  left: calc(100% + 10px);
+  bottom: 0;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.language-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+  position: relative;
+  padding-left: 32px;
+}
+
+.language-item:hover {
+  background-color: var(--hover-color);
+}
+
+.language-item.active {
+  background-color: var(--accent-color);
+  color: white;
+  font-weight: bold;
+}
+
+.language-item.active::before {
+  content: '✓';
+  position: absolute;
+  left: 12px;
+  color: white;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 </style> 

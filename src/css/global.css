@@ -21,6 +21,7 @@
     --disabled-color: #888888;
 }
 
+
 [data-theme="dark"] {
     --bg-color: #1E1E1E;
     --text-color: #D4D4D4;
@@ -39,6 +40,7 @@
     --scrollbar-thumb-hover: #666;
     --delete-hover-bg: rgba(220, 53, 69, 0.1);
     --delete-hover-color: #ff4d4d;
+    --accent-color: #0A84FF;
 }
 
 
