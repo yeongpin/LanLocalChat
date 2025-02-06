@@ -134,18 +134,6 @@ export default {
       if (!file) return;
       this.uploadingFiles.push(file);
       this.$refs.fileInput.value = ''; // 重置 input
-      try {
-        const response = await axios.post('/upload', new FormData(event.target));
-        this.$emit('send-message', {
-          type: 'file',
-          name: file.name,
-          size: file.size,
-          path: response.data.path
-        });
-      } catch (error) {
-        console.error('File upload failed:', error);
-        alert(this.t('chat.uploadFailed'));
-      }
     },
     removeFile(index) {
       this.uploadingFiles.splice(index, 1);
@@ -335,6 +323,10 @@ export default {
 
 .input-area button:hover {
   background-color: var(--hover-color);
+}
+
+.input-area button:active {
+  background-color: var(--active-color);
 }
 
 .attach-btn {

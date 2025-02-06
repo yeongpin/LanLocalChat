@@ -43,18 +43,61 @@ const upload = multer({
 
 // 在線用戶列表
 let onlineUsers = new Map();
-let userSockets = new Map();  // 追踪每個用戶名的最後一個 socket ID
+let userSockets = new Map();
+let disconnectTimers = new Map();
+let messageHistory = [];
+let originalUsernames = new Map();
+
+// 追踪斷開連接的計時器
+const RECONNECT_TIMEOUT = 5000;
+
+// 檢查並清理過期的用戶
+function cleanupStaleUsers() {
+    for (const [socketId, username] of onlineUsers.entries()) {
+        // 如果這個 socket 已經不在連接列表中，清理它
+        if (!io.sockets.sockets.has(socketId)) {
+            cleanupUser(socketId);
+        }
+    }
+}
+
+// 清理用戶
+function cleanupUser(socketId) {
+    const username = onlineUsers.get(socketId);
+    if (username) {
+        userSockets.delete(username);
+        onlineUsers.delete(socketId);
+        originalUsernames.delete(socketId);
+        return username;
+    }
+    return null;
+}
+
+// 檢查用戶名是否可用
+function isUsernameAvailable(username, currentSocketId) {
+    for (const [socketId, name] of onlineUsers.entries()) {
+        if (name === username && socketId !== currentSocketId) {
+            return false;
+        }
+    }
+    return true;
+}
 
 // 存儲最近的消息
-const messageHistory = [];
 const MAX_HISTORY = 100; // 保存最近100條消息
 
 // Socket.IO 連接處理
 io.on('connection', (socket) => {
     console.log('用戶連接');
 
-    // 當新用戶連接時，發送當前在線用戶列表
-    socket.emit('userList', Array.from(onlineUsers.values()));
+    // 清理過期的用戶
+    cleanupStaleUsers();
+
+    // 處理用戶列表請求
+    socket.on('requestUserList', () => {
+        const users = Array.from(onlineUsers.values());
+        socket.emit('userList', users);
+    });
 
     // 處理歷史消息請求
     socket.on('requestHistory', () => {
@@ -63,38 +106,52 @@ io.on('connection', (socket) => {
 
     // 用戶加入
     socket.on('join', (username) => {
-        const oldUsername = onlineUsers.get(socket.id);
-        const existingSocketId = userSockets.get(username);
+        const originalUsername = originalUsernames.get(socket.id);
         
-        // 如果是同一個用戶的新連接，先清理舊連接
-        if (existingSocketId && existingSocketId !== socket.id) {
-            // 清理舊的 socket 連接
-            onlineUsers.delete(existingSocketId);
-        }
-        
-        // 更新用戶的 socket ID
-        userSockets.set(username, socket.id);
-
-        // 如果這個用戶已經在線（使用不同的 socket），不發送加入消息
-        if (Array.from(onlineUsers.values()).includes(username)) {
-            socket.emit('nameError', '此用戶名已被使用');
+        // 避免相同名字的改名消息
+        if (originalUsername === username) {
+            onlineUsers.set(socket.id, username);
+            userSockets.set(username, socket.id);
+            io.emit('userList', Array.from(onlineUsers.values()));
             return;
         }
-
+        
+        // 如果有斷開連接的計時器，清除它
+        const disconnectTimer = disconnectTimers.get(username);
+        if (disconnectTimer) {
+            clearTimeout(disconnectTimer);
+            disconnectTimers.delete(username);
+        }
+        
+        // 如果是新連接，保存原始用戶名
+        if (!originalUsername) {
+            originalUsernames.set(socket.id, username);
+        }
+        
+        // 只有在用戶名被占用且不是重連的情況下才生成新用戶名
+        if (!isUsernameAvailable(username, socket.id)) {
+            const newUsername = `User-${Math.random().toString(36).substr(2, 6)}`;
+            socket.emit('nameChanged', newUsername);
+            username = newUsername;
+        }
+        
         onlineUsers.set(socket.id, username);
+        userSockets.set(username, socket.id);
         io.emit('userList', Array.from(onlineUsers.values()));
         
-        if (oldUsername) {
+        if (originalUsername) {
             io.emit('message', {
                 type: 'system',
-                content: `${oldUsername} 改名為 ${username}`,
-                highlight: username
+                content: `${originalUsername} 改名為 ${username}`,
+                highlight: username,
+                action: 'rename'
             });
         } else {
             io.emit('message', {
                 type: 'system',
                 content: `${username} 加入了聊天室`,
-                highlight: username
+                highlight: username,
+                action: 'join'
             });
         }
     });
@@ -141,21 +198,23 @@ io.on('connection', (socket) => {
 
     // 處理斷開連接
     socket.on('disconnect', () => {
+        console.log('用戶斷開連接');
         const username = onlineUsers.get(socket.id);
         if (username) {
-            // 檢查是否是用戶的最後一個連接
-            if (userSockets.get(username) === socket.id) {
-                userSockets.delete(username);
-                onlineUsers.delete(socket.id);
+            const timer = setTimeout(() => {
+                cleanupUser(socket.id);
                 io.emit('userList', Array.from(onlineUsers.values()));
                 io.emit('message', {
                     type: 'system',
-                    content: `${username} 離開了聊天室`
+                    content: `${username} 離開了聊天室`,
+                    highlight: username,
+                    action: 'leave'
                 });
-            } else {
-                // 如果不是最後一個連接，只清理 socket 映射
-                onlineUsers.delete(socket.id);
-            }
+                disconnectTimers.delete(username);
+                originalUsernames.delete(socket.id);
+            }, RECONNECT_TIMEOUT);
+            
+            disconnectTimers.set(username, timer);
         }
     });
 });

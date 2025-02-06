@@ -69,7 +69,7 @@ export default {
   data() {
     return {
       socket: null,
-      username: `User-${uuidv4().slice(0, 6)}`,
+      username: '',
       messages: [],
       onlineUsers: [],
       showNameForm: false,
@@ -90,7 +90,9 @@ export default {
         }
       },
       showLanguageMenu: false,
-      isConnected: false
+      isConnected: false,
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5
     };
   },
   computed: {
@@ -99,8 +101,16 @@ export default {
     }
   },
   async mounted() {
+    // 每次打開新標籤頁生成新的用戶名
+    this.username = `User-${Math.random().toString(36).substr(2, 6)}`;
+    
     const serverUrl = `http://${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT || 13000}`;
-    this.socket = io(serverUrl);
+    this.socket = io(serverUrl, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
     this.setupSocketListeners();
     
     // 從 localStorage 獲取語言設置
@@ -109,28 +119,31 @@ export default {
       await this.setLocale(savedLocale);
     } catch (error) {
       console.error('Failed to load initial locale:', error);
-      // 使用默認值，不再嘗試重新加載
       console.warn('Using default translations');
-    }
-    
-    // 從 localStorage 獲取用戶名
-    const savedUsername = localStorage.getItem('username');
-    if (savedUsername) {
-      this.username = savedUsername;
     }
     
     // 處理重連邏輯
     this.socket.on('connect', () => {
       console.log('Connected to server');
       this.isConnected = true;
+      this.reconnectAttempts = 0;
       if (this.username) {
         this.socket.emit('join', this.username);
       }
+      this.socket.emit('requestUserList');
     });
     
     this.socket.on('disconnect', () => {
       console.log('Disconnected from server');
       this.isConnected = false;
+    });
+    
+    this.socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      this.reconnectAttempts++;
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.error('Max reconnection attempts reached');
+      }
     });
     
     // 定期檢查連接狀態
@@ -181,6 +194,29 @@ export default {
       // 清理舊的監聽器
       this.socket.removeAllListeners();
       
+      this.socket.on('connect', () => {
+        console.log('Connected to server');
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+        if (this.username) {
+          this.socket.emit('join', this.username);
+        }
+        this.socket.emit('requestUserList');
+      });
+      
+      this.socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        this.isConnected = false;
+      });
+      
+      this.socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        this.reconnectAttempts++;
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.error('Max reconnection attempts reached');
+        }
+      });
+      
       this.socket.on('message', (msg) => {
         this.messages.push(msg);
       });
@@ -190,18 +226,21 @@ export default {
       });
 
       this.socket.on('userList', (users) => {
+        console.log('Received user list:', users);
         this.onlineUsers = users;
       });
 
       this.socket.on('nameError', (error) => {
-        alert(error);
-        this.username = `User-${uuidv4().slice(0, 6)}`;
-        this.socket.emit('join', this.username);
+        console.warn('Username taken:', error);
+      });
+
+      this.socket.on('nameChanged', (newUsername) => {
+        this.username = newUsername;
+        localStorage.setItem('username', newUsername);
       });
 
       this.socket.on('mentioned', (data) => {
         this.playNotificationSound();
-        
         this.showNotification(data);
       });
     },
@@ -231,7 +270,6 @@ export default {
         return;
       }
       this.username = username;
-      localStorage.setItem('username', username);
       if (this.isConnected) {
         this.socket.emit('join', this.username);
       }
@@ -289,15 +327,15 @@ body {
   padding: 20px;
   font-family: Arial, sans-serif;
   height: 95vh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 20px;
 }
 
 .chat-main {
   display: grid;
   grid-template-columns: 1fr 200px;
   gap: 20px;
-  flex: 1;
   background-color: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -328,13 +366,13 @@ body {
 }
 
 .floating-container {
-  position: fixed;
-  left: 20px;
-  bottom: 20px;
-  z-index: 1000;
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+  margin-left: 10px;
 }
 
 .floating-button {
@@ -358,14 +396,15 @@ body {
 
 .language-menu {
   position: absolute;
-  left: calc(100% + 10px);
-  bottom: 0;
+  left: 70%;
+  bottom: 15px;
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   animation: fadeIn 0.2s ease-out;
+  margin-left: 15px;
 }
 
 .language-item {
@@ -402,6 +441,27 @@ body {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    grid-template-columns: 60px 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .floating-container {
+    margin-left: 5px;
+  }
+
+  .language-menu {
+    margin-left: 10px;
+  }
+
+  .floating-button {
+    width: 32px;
+    height: 32px;
   }
 }
 </style> 

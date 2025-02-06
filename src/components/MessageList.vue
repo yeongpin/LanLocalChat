@@ -10,9 +10,13 @@
       <template v-if="msg.type === 'system'">
         <div class="system-message">
           <template v-if="msg.highlight">
-            {{ msg.content.split(msg.highlight)[0] }}
-            <span class="highlight">{{ msg.highlight }}</span>
-            {{ t(msg.action === 'join' ? 'message.systemJoin' : 'message.systemLeave') }}
+            <template v-if="msg.action === 'rename'">
+              {{ msg.content }}
+            </template>
+            <template v-else>
+              <span class="highlight">{{ msg.highlight }}</span>
+              {{ t(msg.action === 'join' ? 'message.systemJoin' : 'message.systemLeave') }}
+            </template>
           </template>
           <template v-else>{{ msg.content }}</template>
         </div>
@@ -142,9 +146,28 @@ export default {
   grid-column: 1;
   border: 1px solid var(--border-color);
   padding: 20px;
-  overflow-y: auto;
+  height: calc(95vh - 150px); /* 減去頂部間距、底部輸入框和padding */
+  overflow-y: scroll;
   background-color: var(--bg-color);
   border-radius: 6px;
+}
+
+/* 美化滾動條 */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: var(--hover-color);
 }
 
 .system-message {

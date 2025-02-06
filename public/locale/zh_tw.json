@@ -36,9 +36,8 @@
     "username": "用戶名",
     "join": "加入",
     "update": "更新",
+    "random": "隨機名字",
     "cancel": "取消"
-
-
   },
   "message": {
     "loadHistory": "載入歷史消息",

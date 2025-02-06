@@ -9,8 +9,15 @@
       @keyup.enter="handleJoin" 
       placeholder="輸入用戶名"
       ref="usernameInput"
+      :maxlength="nameLimit"
     >
-    <button @click="handleJoin">{{ t('login.update') }}</button>
+    <div class="button-group">
+      <button class="random-btn" @click="generateRandomName">
+        <i class="fas fa-random"></i>
+        {{ t('login.random') }}
+      </button>
+      <button @click="handleJoin">{{ t('login.update') }}</button>
+    </div>
   </div>
 </template>
 
@@ -30,14 +37,16 @@ export default {
           title: '加入聊天室',
           username: '用戶名',
           join: '加入',
-          cancel: '取消'
+          cancel: '取消',
+          random: '隨機名字'
         }
       })
     }
   },
   data() {
     return {
-      inputUsername: this.currentUsername
+      inputUsername: this.currentUsername,
+      nameLimit: parseInt(import.meta.env.VITE_NAME_LIMIT || 20)
     }
   },
   mounted() {
@@ -55,6 +64,10 @@ export default {
         this.$emit('join', trimmedUsername);
         this.inputUsername = '';
       }
+    },
+    generateRandomName() {
+      const randomId = Math.random().toString(36).substr(2, 6);
+      this.inputUsername = `User-${randomId}`;
     }
   }
 }
@@ -118,5 +131,31 @@ button:hover {
 input:focus {
   outline: none;
   border-color: #666;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.random-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.random-btn:hover {
+  background-color: var(--hover-color);
 }
 </style> 
