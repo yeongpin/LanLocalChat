@@ -45,12 +45,21 @@ const upload = multer({
 let onlineUsers = new Map();
 let userSockets = new Map();  // 追踪每個用戶名的最後一個 socket ID
 
+// 存儲最近的消息
+const messageHistory = [];
+const MAX_HISTORY = 100; // 保存最近100條消息
+
 // Socket.IO 連接處理
 io.on('connection', (socket) => {
     console.log('用戶連接');
 
     // 當新用戶連接時，發送當前在線用戶列表
     socket.emit('userList', Array.from(onlineUsers.values()));
+
+    // 處理歷史消息請求
+    socket.on('requestHistory', () => {
+        socket.emit('chatHistory', messageHistory);
+    });
 
     // 用戶加入
     socket.on('join', (username) => {
@@ -92,11 +101,42 @@ io.on('connection', (socket) => {
 
     // 處理消息
     socket.on('message', (data) => {
-        io.emit('message', {
+        // 檢查消息中的提及
+        let mentions = [];
+        if (typeof data === 'string') {
+          const mentionRegex = /@(\S+)/g;
+          mentions = [...data.matchAll(mentionRegex)].map(match => match[1]);
+        }
+
+        const messageData = {
             type: 'user',
             user: onlineUsers.get(socket.id),
-            content: data
-        });
+            content: data,
+            timestamp: Date.now(),
+            mentions: mentions
+        };
+
+        // 添加到歷史記錄
+        messageHistory.push(messageData);
+        if (messageHistory.length > MAX_HISTORY) {
+            messageHistory.shift();
+        }
+
+        io.emit('message', messageData);
+
+        // 發送提及通知
+        if (mentions.length > 0) {
+            const mentionedSocketIds = Array.from(onlineUsers.entries())
+                .filter(([_, username]) => mentions.includes(username))
+                .map(([socketId]) => socketId);
+
+            mentionedSocketIds.forEach(socketId => {
+                io.to(socketId).emit('mentioned', {
+                    from: onlineUsers.get(socket.id),
+                    message: data
+                });
+            });
+        }
     });
 
     // 處理斷開連接

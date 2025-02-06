@@ -17,14 +17,19 @@
     </div>
     <div class="input-controls">
       <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none">
-      <button class="attach-btn" @click="handleAttachClick">
-        <i class="fas fa-paperclip"></i>
-      </button>
+      <div class="action-buttons">
+        <button class="attach-btn" @click="handleAttachClick">
+          <i class="fas fa-paperclip"></i>
+        </button>
+        <button class="mention-btn" @click="insertMentionSymbol">
+          <i class="fas fa-at"></i>
+        </button>
+      </div>
       <textarea 
         v-model="message" 
         @keydown.enter.exact.prevent="sendMessage"
         @keydown="handleKeydown"
-        @input="adjustHeight"
+        @input="onInput"
         placeholder="輸入消息..."
         rows="1"
         ref="messageInput"
@@ -32,6 +37,16 @@
       <button class="send-btn" @click="sendMessage">
         <i class="fas fa-paper-plane"></i>
       </button>
+    </div>
+    <div v-if="showMentions" class="mention-list" :style="mentionListStyle">
+      <div 
+        v-for="user in filteredUsers" 
+        :key="user"
+        class="mention-item"
+        @click="selectMention(user)"
+      >
+        @{{ user }}
+      </div>
     </div>
   </div>
 </template>
@@ -45,10 +60,34 @@ export default {
   components: {
     FileCard
   },
+  props: {
+    users: {
+      type: Array,
+      required: true
+    }
+  },
   data() {
     return {
       message: '',
-      uploadingFiles: []
+      uploadingFiles: [],
+      showMentions: false,
+      mentionFilter: '',
+      mentionPosition: { top: 0, left: 0 },
+      currentMentionStart: -1
+    }
+  },
+  computed: {
+    filteredUsers() {
+      if (!this.mentionFilter) return this.users;
+      return this.users.filter(user => 
+        user.toLowerCase().includes(this.mentionFilter.toLowerCase())
+      );
+    },
+    mentionListStyle() {
+      return {
+        top: `${this.mentionPosition.top}px`,
+        left: `${this.mentionPosition.left}px`
+      }
     }
   },
   mounted() {
@@ -128,7 +167,78 @@ export default {
         });
       }
     },
+    insertMentionSymbol() {
+      const textarea = this.$refs.messageInput;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      this.message = this.message.slice(0, start) + '@' + this.message.slice(end);
+      this.currentMentionStart = start;
+      
+      this.$nextTick(() => {
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
+        this.showMentionList(true);
+      });
+    },
+    showMentionList(force = false) {
+      if (!this.users || this.users.length === 0) return;
+      if (!force && !this.mentionFilter && this.users.length > 10) return;
 
+      const textarea = this.$refs.messageInput;
+      const pos = textarea.getBoundingClientRect();
+      
+      // 計算文本框的行高
+      const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight);
+      
+      // 獲取光標位置
+      const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+      const lines = textBeforeCursor.split('\n');
+      const currentLine = lines.length;
+      
+      // 計算垂直位置
+      const verticalOffset = (currentLine - 1) * lineHeight;
+      
+      // 計算選單的預計高度（每個項目 36px + padding 和 border）
+      const estimatedHeight = Math.min(this.filteredUsers.length * 36 + 16, 200);
+      
+      this.mentionPosition = {
+        top: pos.top - estimatedHeight + 8, // 顯示在輸入框上方
+        left: pos.left
+      };
+      
+      this.showMentions = true;
+      this.mentionFilter = '';
+    },
+    onInput(event) {
+      this.adjustHeight();
+      
+      const text = event.target.value;
+      const pos = event.target.selectionStart;
+      
+      if (text[pos - 1] === '@' && (pos === 1 || text[pos - 2] === ' ' || text[pos - 2] === '\n')) {
+        this.currentMentionStart = pos - 1;
+        this.showMentionList(true);
+      } else if (this.currentMentionStart >= 0) {
+        const mentionText = text.slice(this.currentMentionStart + 1, pos);
+        if (mentionText.includes(' ') || mentionText.includes('\n')) {
+          this.showMentions = false;
+          this.currentMentionStart = -1;
+        } else {
+          this.mentionFilter = mentionText;
+          this.showMentions = true;
+          this.showMentionList();
+        }
+      }
+    },
+    selectMention(user) {
+      const before = this.message.slice(0, this.currentMentionStart);
+      const after = this.message.slice(this.currentMentionStart + (this.mentionFilter?.length || 0) + 1);
+      this.message = before + '@' + user + ' ' + after;
+      
+      this.showMentions = false;
+      this.currentMentionStart = -1;
+      this.$refs.messageInput.focus();
+    },
     adjustHeight() {
       const textarea = this.$refs.messageInput;
       textarea.style.height = '36px';
@@ -255,5 +365,94 @@ export default {
 
 .send-btn:hover {
   opacity: 0.8;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.mention-btn {
+  padding: 8px 12px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.mention-btn:hover {
+  background-color: var(--hover-color);
+}
+
+.mention-list {
+  position: fixed;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 150px;
+  backdrop-filter: blur(10px);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mention-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.mention-item::before {
+  content: '@';
+  opacity: 0.5;
+}
+
+.mention-item:hover {
+  background-color: var(--hover-color);
+}
+
+.mention-item:not(:last-child) {
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* 添加滾動條樣式 */
+.mention-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mention-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mention-list::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 3px;
+}
+
+.mention-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--hover-color);
 }
 </style> 

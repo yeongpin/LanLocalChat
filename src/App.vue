@@ -6,13 +6,19 @@
       </button>
     </div>
     <div class="chat-main">
-      <message-list :messages="messages" />
+      <message-list 
+        :messages="messages"
+        @load-history="loadHistory" 
+      />
       <user-list 
         :users="onlineUsers" 
         :current-user="username"
         @show-name-editor="showNameEditor" 
       />
-      <chat-input @send-message="handleSendMessage" />
+      <chat-input 
+        @send-message="handleSendMessage" 
+        :users="filteredUsers"
+      />
     </div>
     <div v-if="showNameForm" class="modal-overlay">
       <login-form 
@@ -49,8 +55,13 @@ export default {
       messages: [],
       onlineUsers: [],
       showNameForm: false,
-      isDarkTheme: true
+      isDarkTheme: true,
     };
+  },
+  computed: {
+    filteredUsers() {
+      return this.onlineUsers.filter(user => user !== this.username);
+    }
   },
   mounted() {
     const serverUrl = `http://${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT || 13000}`;
@@ -78,6 +89,10 @@ export default {
         this.messages.push(msg);
       });
 
+      this.socket.on('chatHistory', (history) => {
+        this.messages.unshift(...history);
+      });
+
       this.socket.on('userList', (users) => {
         this.onlineUsers = users;
       });
@@ -86,6 +101,31 @@ export default {
         alert(error);
         this.username = `User-${uuidv4().slice(0, 6)}`;
         this.socket.emit('join', this.username);
+      });
+
+      this.socket.on('mentioned', (data) => {
+        // 播放提示音
+        this.playNotificationSound();
+        
+        // 如果瀏覽器支持通知且用戶已授權
+        if (Notification.permission === "granted") {
+          new Notification(`${data.from} 提到了你`, {
+            body: data.message,
+            icon: './public/favicon.ico'
+          });
+        }
+        // 如果用戶未決定是否允許通知
+
+        else if (Notification.permission !== "denied") {
+          Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+              new Notification(`${data.from} 提到了你`, {
+                body: data.message,
+                icon: './public/favicon.ico'
+              });
+            }
+          });
+        }
       });
     },
     handleJoin(username) {
@@ -112,6 +152,26 @@ export default {
     setTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
       this.isDarkTheme = theme === 'dark';
+    },
+    loadHistory() {
+      this.socket.emit('requestHistory');
+    },
+    playNotificationSound() {
+      // 使用 Web Audio API 創建提示音
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // 設置音量
+      gainNode.gain.value = 0.1;
+      
+      // 設置音調和持續時間
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.1); // 持續 0.1 秒
     }
   }
 };

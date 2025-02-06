@@ -1,5 +1,10 @@
 <template>
   <div class="chat-messages" ref="messageContainer">
+    <div v-if="showHistoryButton" class="load-history">
+      <button @click="loadHistory" class="history-btn">
+        <i class="fas fa-history"></i> 載入歷史消息
+      </button>
+    </div>
     <div v-for="(msg, index) in messages" :key="index" :class="msg.type">
       <template v-if="msg.type === 'system'">
         <div class="system-message">
@@ -59,10 +64,21 @@ export default {
   },
   data() {
     return {
-      previewImage: null
+      previewImage: null,
+      hasLoadedHistory: false
     }
   },
+  computed: {
+    showHistoryButton() {
+      return !this.hasLoadedHistory;
+    }
+  },
+  emits: ['load-history'],
   methods: {
+    loadHistory() {
+      this.$emit('load-history');
+      this.hasLoadedHistory = true;
+    },
     isMediaFile(path) {
       return typeof path === 'string' && path.startsWith('/uploads/');
     },
@@ -89,6 +105,16 @@ export default {
   },
   updated() {
     this.scrollToBottom();
+  },
+  watch: {
+    messages: {
+      handler(newMessages) {
+        if (newMessages.length > 0 && !this.hasLoadedHistory) {
+          this.hasLoadedHistory = true;
+        }
+      },
+      immediate: true
+    }
   }
 }
 </script>
@@ -236,5 +262,38 @@ export default {
 .image-info .file-size {
   font-size: 0.8em;
   opacity: 0.8;
+}
+
+.load-history {
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--input-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.history-btn {
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+}
+
+.history-btn:hover {
+  background: var(--hover-color);
+  transform: scale(1.01);
+}
+
+.history-btn i {
+  font-size: 0.9em;
 }
 </style> 
