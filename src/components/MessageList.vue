@@ -23,20 +23,25 @@
       </template>
       <template v-else>
         <div class="message">
-          <div class="message-header">{{ msg.user }}</div>
+          <div class="message-header">
+            <span class="username">{{ msg.user }}</span>
+            <span class="timestamp">{{ formatTimestamp(msg.timestamp) }}</span>
+          </div>
           <div class="message-content">
-            <template v-if="typeof msg.content === 'string'">
-              {{ msg.content }}
-            </template>
-            <media-card
-              v-else-if="msg.content.type === 'file' && (isImage(msg.content.path) || isVideo(msg.content.path))"
-              :file="msg.content"
-              @preview="showImagePreview"
-            />
-            <file-card
-              v-else-if="msg.content.type === 'file' && !isImage(msg.content.path) && !isVideo(msg.content.path)"
-              :file="msg.content"
-            />
+            <div class="text">
+              <template v-if="typeof msg.content === 'string'">
+                {{ msg.content }}
+              </template>
+              <media-card
+                v-else-if="msg.content.type === 'file' && (isImage(msg.content.path) || isVideo(msg.content.path))"
+                :file="msg.content"
+                @preview="showImagePreview"
+              />
+              <file-card
+                v-else-if="msg.content.type === 'file' && !isImage(msg.content.path) && !isVideo(msg.content.path)"
+                :file="msg.content"
+              />
+            </div>
           </div>
         </div>
       </template>
@@ -123,6 +128,25 @@ export default {
     },
     showImagePreview(src) {
       this.previewImage = src;
+    },
+    formatTimestamp(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const time = `${hours}:${minutes}`;
+      
+      if (isToday) {
+        return time;
+      }
+      
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${time} ${year}/${month}/${day}`;
     }
   },
   updated() {
@@ -184,9 +208,33 @@ export default {
 }
 
 .message-header {
-  color: #4a9eff;
-  font-weight: bold;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin-bottom: 4px;
+}
+
+.username {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.timestamp {
+  font-size: 0.8em;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.message-content {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 8px;
+  background-color: var(--message-ai-bg);
+}
+
+.text {
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .highlight {
