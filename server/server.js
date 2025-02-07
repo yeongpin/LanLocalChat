@@ -17,6 +17,7 @@ const { promisify } = require('util');
 const stat = promisify(fs.stat);
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
+const os = require('os');
 dotenv.config();
 
 // 存儲最近的消息
@@ -37,10 +38,32 @@ let roomMessages = new Map(); // 存儲每個房間的消息
 let roomPasswords = new Map(); // 存儲房間密碼
 let roomPassNeedIds = new Map(); // 存儲房間密碼需求標識
 
-// 設置靜態文件目錄
+// 獲取系統臨時目錄
+function getUploadsDir() {
+  // 在開發環境使用本地目錄
+  if (process.pkg === undefined) {
+    const serverDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(serverDir)) {
+      fs.mkdirSync(serverDir, { recursive: true });
+    }
+    return serverDir;
+  }
+  
+  // 在打包環境使用系統臨時目錄
+  const tempDir = path.join(os.tmpdir(), 'lanchat-uploads');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  return tempDir;
+}
+
+// 獲取上傳目錄
+const uploadDir = getUploadsDir();
+
+// 設置靜態文件目錄和跨域
 app.use(cors());  // 允許所有跨域請求
 app.use(express.static('public'));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadDir));
 
 // 解析時間字符串，如 "7d", "24h", "30m", "60s"
 function parseTimeString(timeStr) {
@@ -73,7 +96,7 @@ async function cleanup() {
         });
 
         // 清理上傳文件
-        const uploadsDir = path.join(__dirname, 'uploads');
+        const uploadsDir = uploadDir;
         const files = await readdir(uploadsDir);
 
         for (const file of files) {
@@ -114,12 +137,6 @@ app.get('/api/checkRoom', (req, res) => {
         needPassword: !!passNeedId && passNeedId !== 'false'
     });
 });
-
-// 確保上傳目錄存在
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // 配置文件上傳
 const storage = multer.diskStorage({
