@@ -47,16 +47,30 @@ let userSockets = new Map();
 let disconnectTimers = new Map();
 let messageHistory = [];
 let originalUsernames = new Map();
+let joinMessages = new Set();  // 追踪已發送的加入消息
 
 // 追踪斷開連接的計時器
-const RECONNECT_TIMEOUT = 5000;
+const RECONNECT_TIMEOUT = 1000;
+
+// 防止重複消息的超時時間
+const MESSAGE_DEBOUNCE = 2000;
 
 // 檢查並清理過期的用戶
 function cleanupStaleUsers() {
     for (const [socketId, username] of onlineUsers.entries()) {
-        // 如果這個 socket 已經不在連接列表中，清理它
         if (!io.sockets.sockets.has(socketId)) {
             cleanupUser(socketId);
+        }
+    }
+}
+
+// 清理舊的加入消息
+function cleanupJoinMessages() {
+    const now = Date.now();
+    for (const message of joinMessages) {
+        const [username, timestamp] = message.split('|');
+        if (now - parseInt(timestamp) > MESSAGE_DEBOUNCE) {
+            joinMessages.delete(message);
         }
     }
 }
@@ -65,6 +79,25 @@ function cleanupStaleUsers() {
 function cleanupUser(socketId) {
     const username = onlineUsers.get(socketId);
     if (username) {
+        // 檢查是否有其他相同用戶名的連接
+        let hasOtherConnection = false;
+        for (const [otherSocketId, otherUsername] of onlineUsers.entries()) {
+            if (otherSocketId !== socketId && otherUsername === username) {
+                hasOtherConnection = true;
+                break;
+            }
+        }
+
+        // 只有在沒有其他連接時才發送離開消息
+        if (!hasOtherConnection) {
+            io.emit('message', {
+                type: 'system',
+                content: `${username} 離開了聊天室`,
+                highlight: username,
+                action: 'leave'
+            });
+        }
+
         userSockets.delete(username);
         onlineUsers.delete(socketId);
         originalUsernames.delete(socketId);
@@ -92,6 +125,7 @@ io.on('connection', (socket) => {
 
     // 清理過期的用戶
     cleanupStaleUsers();
+    cleanupJoinMessages();
 
     // 處理用戶列表請求
     socket.on('requestUserList', () => {
@@ -106,6 +140,13 @@ io.on('connection', (socket) => {
 
     // 用戶加入
     socket.on('join', (username) => {
+        // 先清理舊的計時器
+        const oldTimer = disconnectTimers.get(username);
+        if (oldTimer) {
+            clearTimeout(oldTimer);
+            disconnectTimers.delete(username);
+        }
+        
         const originalUsername = originalUsernames.get(socket.id);
         
         // 避免相同名字的改名消息
@@ -114,18 +155,6 @@ io.on('connection', (socket) => {
             userSockets.set(username, socket.id);
             io.emit('userList', Array.from(onlineUsers.values()));
             return;
-        }
-        
-        // 如果有斷開連接的計時器，清除它
-        const disconnectTimer = disconnectTimers.get(username);
-        if (disconnectTimer) {
-            clearTimeout(disconnectTimer);
-            disconnectTimers.delete(username);
-        }
-        
-        // 如果是新連接，保存原始用戶名
-        if (!originalUsername) {
-            originalUsernames.set(socket.id, username);
         }
         
         // 只有在用戶名被占用且不是重連的情況下才生成新用戶名
@@ -147,12 +176,21 @@ io.on('connection', (socket) => {
                 action: 'rename'
             });
         } else {
-            io.emit('message', {
-                type: 'system',
-                content: `${username} 加入了聊天室`,
-                highlight: username,
-                action: 'join'
-            });
+            // 檢查是否已經發送過加入消息
+            const messageKey = `${username}|${Date.now()}`;
+            if (!Array.from(joinMessages).some(msg => msg.startsWith(`${username}|`))) {
+                joinMessages.add(messageKey);
+                io.emit('message', {
+                    type: 'system',
+                    content: `${username} 加入了聊天室`,
+                    highlight: username,
+                    action: 'join'
+                });
+                // 設置定時器清理消息記錄
+                setTimeout(() => {
+                    joinMessages.delete(messageKey);
+                }, MESSAGE_DEBOUNCE);
+            }
         }
     });
 
@@ -204,12 +242,6 @@ io.on('connection', (socket) => {
             const timer = setTimeout(() => {
                 cleanupUser(socket.id);
                 io.emit('userList', Array.from(onlineUsers.values()));
-                io.emit('message', {
-                    type: 'system',
-                    content: `${username} 離開了聊天室`,
-                    highlight: username,
-                    action: 'leave'
-                });
                 disconnectTimers.delete(username);
                 originalUsernames.delete(socket.id);
             }, RECONNECT_TIMEOUT);
