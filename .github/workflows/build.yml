@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-web:
     name: Build Vue Frontend
@@ -107,4 +111,4 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} 
+          GITHUB_TOKEN: ${{ github.token }} 
