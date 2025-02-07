@@ -29,7 +29,8 @@
   },
   "language": {
     "en": "English",
-    "zh_tw": "繁體中文"
+    "zh_tw": "繁體中文",
+    "zh_cn": "简体中文"
   },
   "login": {
     "title": "Update Username",

@@ -25,7 +25,7 @@
       </button>
       <div v-if="showLanguageMenu" class="language-menu">
         <div 
-          v-for="lang in ['en', 'zh_tw']" 
+          v-for="lang in ['en', 'zh_tw', 'zh_cn']" 
           :key="lang"
           class="language-item"
           :class="{ active: currentLocale === lang }"
@@ -126,7 +126,8 @@ export default {
         },
         language: {
           en: 'English',
-          zh_tw: '繁體中文'
+          zh_tw: '繁體中文',
+          zh_cn: '简体中文'
         }
       },
       showLanguageMenu: false,

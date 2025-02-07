@@ -29,7 +29,8 @@
   },
   "language": {
     "en": "English",
-    "zh_tw": "繁體中文"
+    "zh_tw": "繁體中文",
+    "zh_cn": "簡體中文"
   },
   "login": {
     "title": "更新用戶名",
