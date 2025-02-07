@@ -37,8 +37,12 @@
                   :file="msg.content"
                   @preview="showImagePreview"
                 />
+                <sound-card
+                  v-else-if="msg.type === 'file' && msg.content?.path && isSound(msg.content.path)"
+                  :file="msg.content"
+                />
                 <file-card
-                  v-else-if="msg.type === 'file' && msg.content?.path && !isImage(msg.content.path) && !isVideo(msg.content.path)"
+                  v-else-if="msg.type === 'file' && msg.content?.path && !isImage(msg.content.path) && !isVideo(msg.content.path) && !isSound(msg.content.path)"
                   :file="msg.content"
                 />
                 <template v-else>
@@ -62,6 +66,7 @@
   <script>
   import FileCard from './FileCard.vue';
   import MediaCard from './MediaCard.vue';
+  import SoundCard from './SoundCard.vue';
   
   export default {
     name: 'MessageList',
@@ -86,7 +91,8 @@
     },
     components: {
       FileCard,
-      MediaCard
+      MediaCard,
+      SoundCard
     },
     data() {
       return {
@@ -117,6 +123,9 @@
       },
       isVideo(path) {
         return typeof path === 'string' && /\.(mp4|webm)$/i.test(path);
+      },
+      isSound(path) {
+        return typeof path === 'string' && /\.(mp3|wav|ogg|m4a)$/i.test(path);
       },
       scrollToBottom() {
         const container = this.$refs.messageContainer;
