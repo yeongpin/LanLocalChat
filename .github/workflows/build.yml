@@ -18,10 +18,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
           
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
         
       - name: Build Vue App
         run: npm run build
@@ -56,12 +55,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
           
       - name: Install Dependencies
         run: |
           cd server
-          npm ci
+          npm install
           npm install -g pkg
           
       - name: Build Server Binary
