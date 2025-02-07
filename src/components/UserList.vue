@@ -2,14 +2,20 @@
   <div class="user-list">
     <h3 class="user-list-title">{{ t('user.online') }}</h3>
     <div class="users">
-      <div v-for="user in users" :key="user" class="user-item">
-        <span class="username" :title="user">{{ truncateUsername(user) }}</span>
-        {{ user === currentUser ? t('user.you') : '' }}
+      <div 
+        v-for="user in users" 
+        :key="user.id"
+        class="user-item"
+        :class="{ current: user.user === currentUser }"
+      >
+        <span class="user-info">
+          {{ user.user }}
+        </span>
+        {{ user.user === currentUser ? t('user.you') : '' }}
         <button 
-          v-if="user === currentUser"
-          class="change-name-btn"
+          v-if="user.user === currentUser" 
           @click="$emit('show-name-editor')"
-          :title="t('user.changeName')"
+          class="change-name-btn"
         >
           <i class="fas fa-edit"></i>
         </button>
@@ -76,6 +82,8 @@ i.fas.fa-edit {
   padding-bottom: 10px;
   margin-bottom: 10px;
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
 }
 .user-list {
   grid-column: 2;
@@ -93,6 +101,7 @@ i.fas.fa-edit {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  position: relative;
 }
 
 .user-item .username {
@@ -101,30 +110,6 @@ i.fas.fa-edit {
 }
 
 .user-item .change-name-btn {
-  margin-left: auto;
-}
-
-h3 {
-  color: #4a9eff;
-  margin-top: 0;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  padding: 8px;
-  margin: 4px 0;
-  background-color: var(--input-bg);
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.change-name-btn {
   background: none;
   border: none;
   color: #4a9eff;
@@ -132,6 +117,8 @@ li {
   padding: 4px;
   opacity: 0.7;
   transition: opacity 0.3s;
+  position: absolute;
+  right: 0;
 }
 
 .change-name-btn:hover {
@@ -162,5 +149,17 @@ li {
   white-space: nowrap;
   max-width: 150px;
   display: inline-block;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.user-type {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 </style> 

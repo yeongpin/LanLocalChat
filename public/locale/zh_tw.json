@@ -63,6 +63,8 @@
     "roomNotFound": "找不到房間",
     "shareRoom": "分享房間",
     "shareWithPassword": "包含密碼分享",
-    "copied": "已複製到剪貼板"
+    "includePassword": "是否包含密碼一起分享？",
+    "copied": "已複製到剪貼板",
+    "leaveToPublic": "返回公共聊天室"
   }
 } 

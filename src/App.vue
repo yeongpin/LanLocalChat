@@ -4,6 +4,22 @@
       <button class="floating-button" @click="showCreateRoom">
         <i class="fas fa-comments"></i>
       </button>
+      <button 
+        v-if="currentRoomId !== 'public'"
+        class="floating-button share-room" 
+        @click="shareRoom"
+        :title="t('room.shareRoom')"
+      >
+        <i class="fas fa-share-alt"></i>
+      </button>
+      <button 
+        v-if="currentRoomId !== 'public'"
+        class="floating-button leave-room" 
+        @click="leaveToPublic"
+        :title="t('room.leaveToPublic')"
+      >
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
       <button class="floating-button" @click="toggleLanguageMenu">
         <i class="fas fa-globe"></i>
       </button>
@@ -55,6 +71,7 @@
         @close="showRoomModal = false"
         @create="handleCreateRoom"
         :localeData="localeData"
+        :socket="socket"
       />
     </div>
   </div>
@@ -106,7 +123,8 @@ export default {
       isConnected: false,
       reconnectAttempts: 0,
       maxReconnectAttempts: 5,
-      showRoomModal: false
+      showRoomModal: false,
+      currentRoomId: new URLSearchParams(window.location.search).get('chat_id') || 'public',
     };
   },
   computed: {
@@ -135,7 +153,10 @@ export default {
       this.socket = io(serverUrl, {
         query: {
           chat_id: params.get('chat_id') || 'public',
-          private: isPrivate ? '1' : '0'
+          private: isPrivate ? '1' : '0',
+          pass: params.get('pass'),
+          pass_need: params.get('pass_need'),
+          creating: params.get('creating')
         },
         reconnection: true,
         reconnectionDelay: 1000,
@@ -229,14 +250,42 @@ export default {
       // 清理舊的監聽器
       this.socket.removeAllListeners();
       
+      // 處理錯誤消息
+      this.socket.on('error', (error) => {
+        if (error.type === 'auth') {
+          // 如果需要密碼，顯示密碼輸入框
+          if (error.message === 'need_password') {
+            const password = prompt(this.t('room.passwordRequired'));
+            if (password) {
+              // 添加密碼到 URL 並重新加載
+              const url = new URL(window.location.href);
+              url.searchParams.set('pass', password);
+              window.location.href = url.toString();
+            } else {
+              // 如果用戶取消輸入密碼，返回公共聊天室
+              window.location.href = '/?chat_id=public';
+            }
+            return;
+          }
+          alert(error.message);
+          // 如果是認證錯誤，重定向到公共聊天室
+          window.location.href = '/?chat_id=public';
+        }
+      });
+      
+      // 處理連接確認
+      this.socket.on('connectionConfirmed', (data) => {
+        console.log('連接確認:', data);
+        // 確保用戶加入正確的房間
+        if (this.username) {
+          this.socket.emit('join', this.username);
+        }
+      });
+      
       this.socket.on('connect', () => {
         console.log('Connected to server');
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        if (this.username) {
-          this.socket.emit('join', this.username);
-        }
-        this.socket.emit('requestUserList');
       });
       
       this.socket.on('disconnect', () => {
@@ -261,8 +310,12 @@ export default {
       });
 
       this.socket.on('userList', (users) => {
+        // 檢查是否有重複的用戶
+        const uniqueUsers = users.filter((user, index, self) =>
+          index === self.findIndex((u) => u.user === user.user)
+        );
         console.log('Received user list:', users);
-        this.onlineUsers = users;
+        this.onlineUsers = uniqueUsers;
       });
 
       this.socket.on('nameError', (error) => {
@@ -352,6 +405,38 @@ export default {
       // 處理創建房間的邏輯
       console.log('Creating room:', roomData);
       this.showRoomModal = false;
+    },
+    leaveToPublic() {
+      // 重定向到公共聊天室
+      window.location.href = '/?chat_id=public';
+    },
+    shareRoom() {
+      const params = new URLSearchParams(window.location.search);
+      const passNeed = params.get('pass_need');
+      const password = params.get('pass');
+      
+      if (passNeed && passNeed !== 'false') {
+        // 如果需要密碼，詢問是否包含密碼
+        if (confirm(this.t('room.includePassword'))) {
+          // 包含密碼的URL
+          const url = window.location.href;
+          navigator.clipboard.writeText(url).then(() => {
+            alert(this.t('room.copied'));
+          });
+        } else {
+          // 不包含密碼的URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete('pass');
+          navigator.clipboard.writeText(url.toString()).then(() => {
+            alert(this.t('room.copied'));
+          });
+        }
+      } else {
+        // 不需要密碼，直接複製URL
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          alert(this.t('room.copied'));
+        });
+      }
     }
   }
 };
@@ -506,5 +591,25 @@ body {
     width: 32px;
     height: 32px;
   }
+}
+
+.leave-room {
+  background-color: var(--error-color);
+  color: white;
+}
+
+.leave-room:hover {
+  background-color: var(--error-hover-color);
+  transform: scale(1.1);
+}
+
+.share-room {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.share-room:hover {
+  background-color: var(--accent-hover-color);
+  transform: scale(1.1);
 }
 </style> 

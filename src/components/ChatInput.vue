@@ -41,11 +41,11 @@
     <div v-if="showMentions" class="mention-list" :style="mentionListStyle">
       <div 
         v-for="user in filteredUsers" 
-        :key="user"
+        :key="user.id"
         class="mention-item"
         @click="selectMention(user)"
       >
-        @{{ user }}
+        @{{ user.user }}
       </div>
     </div>
   </div>
@@ -255,9 +255,11 @@ export default {
       }
     },
     selectMention(user) {
+      // 檢查 user 是否是對象
+      const username = typeof user === 'object' ? user.user : user;
       const before = this.message.slice(0, this.currentMentionStart);
       const after = this.message.slice(this.currentMentionStart + (this.mentionFilter?.length || 0) + 1);
-      this.message = before + '@' + user + ' ' + after;
+      this.message = before + '@' + username + ' ' + after;
       
       this.showMentions = false;
       this.currentMentionStart = -1;

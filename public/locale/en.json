@@ -59,9 +59,8 @@
     "roomNotFound": "Room Not Found",
     "shareRoom": "Share Room",
     "shareWithPassword": "Share with Password",
-    "copied": "Copied to clipboard"
-
+    "includePassword": "Include password in the share link?",
+    "copied": "Copied to clipboard",
+    "leaveToPublic": "Return to Public Chat"
   }
-
-
 } 

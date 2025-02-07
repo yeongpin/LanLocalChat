@@ -21,7 +21,7 @@
           <template v-else>{{ msg.content }}</template>
         </div>
       </template>
-      <template v-else>
+      <template v-else-if="msg.type === 'user'">
         <div class="message">
           <div class="message-header">
             <span class="username">{{ msg.user }}</span>
@@ -29,19 +29,31 @@
           </div>
           <div class="message-content">
             <div class="text">
-              <template v-if="typeof msg.content === 'string'">
-                {{ msg.content }}
-              </template>
+              {{ msg.content }}
+            </div>
+          </div>
+        </div>
+      </template>
+      <template v-else-if="msg.type === 'file'">
+        <div class="message">
+          <div class="message-header">
+            <span class="username">{{ msg.user }}</span>
+            <span class="timestamp">{{ formatTimestamp(msg.timestamp) }}</span>
+          </div>
+          <div class="message-content">
+            <div class="text">
               <media-card
-                v-else-if="msg.content.type === 'file' && (isImage(msg.content.path) || isVideo(msg.content.path))"
-                :file="msg.content"
-                @preview="showImagePreview"
-              />
-              <file-card
-                v-else-if="msg.content.type === 'file' && !isImage(msg.content.path) && !isVideo(msg.content.path)"
-                :file="msg.content"
+                :file="msg"
+                :localeData="localeData"
               />
             </div>
+          </div>
+        </div>
+      </template>
+      <template v-else>
+        <div class="message">
+          <div class="message-content">
+            {{ msg }}
           </div>
         </div>
       </template>

@@ -51,6 +51,10 @@ export default {
           passwordRequired: '請輸入密碼'
         }
       })
+    },
+    socket: {
+      type: Object,
+      required: true
     }
   },
   data() {
@@ -85,20 +89,30 @@ export default {
       }
       
       const roomId = uuidv4().slice(0, 16);
+      // 生成隨機的16進制密碼標識
+      const passNeedId = this.usePassword ? 
+        Array.from(crypto.getRandomValues(new Uint8Array(8)))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('') : 
+        'false';
+      
       const roomData = {
         roomId,
-        password: this.usePassword ? this.password : null
+        password: this.usePassword ? this.password : null,
+        passNeedId: passNeedId
       };
       
       // 生成房間URL
       const baseUrl = window.location.origin;
-      let url = `${baseUrl}/?chat_id=${roomId}&private=1`;
-      if (this.usePassword) {
+      let url = `${baseUrl}/?chat_id=${roomId}&private=1&pass_need=${passNeedId}&creating=1`;
+      if (this.usePassword && this.password) {
         url += `&pass=${this.password}`;
       }
       
-      // 在新標籤頁中打開
-      window.open(url, '_blank');
+      // 使用回調確保房間創建完成後再打開新標籤
+      this.socket.emit('createRoom', roomData, () => {
+        window.open(url, '_blank');
+      });
       
       this.password = '';
       this.usePassword = false;
