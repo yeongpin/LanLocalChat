@@ -27,7 +27,7 @@ jobs:
         run: npm run build
         
       - name: Upload Web Build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vite_web
           path: dist/
@@ -70,7 +70,7 @@ jobs:
           pkg . --targets node18-${{ matrix.platform }}-${{ matrix.target }} --output ../build/lanchat-${{ matrix.os }}
           
       - name: Upload Server Build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: server-${{ matrix.os }}
           path: build/lanchat-${{ matrix.os }}*
@@ -83,7 +83,7 @@ jobs:
     
     steps:
       - name: Download All Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         
       - name: Prepare Release Files
         run: |
