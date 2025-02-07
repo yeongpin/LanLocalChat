@@ -61,6 +61,8 @@
     "shareWithPassword": "Share with Password",
     "includePassword": "Include password in the share link?",
     "copied": "Copied to clipboard",
-    "leaveToPublic": "Return to Public Chat"
+    "leaveToPublic": "Return to Public Chat",
+    "needPassword": "Need Password",
+    "join": "Join Room"
   }
 } 

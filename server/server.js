@@ -20,6 +20,18 @@ app.use(cors());  // 允許所有跨域請求
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
+// 檢查房間API
+app.get('/api/checkRoom', (req, res) => {
+    const { roomId } = req.query;
+    const room = rooms.get(roomId);
+    const passNeedId = roomPassNeedIds.get(roomId);
+    
+    res.json({
+        exists: !!room,
+        needPassword: !!passNeedId && passNeedId !== 'false'
+    });
+});
+
 // 確保上傳目錄存在
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -223,60 +235,47 @@ io.on('connection', (socket) => {
         const storedPassNeedId = roomPassNeedIds.get(roomId);
         const creating = socket.handshake.query.creating === '1';
         
-        console.log('驗證信息:', {
-            creating,
-            hasRoom: !!room,
-            storedPassNeedId,
-            hasPassword: !!password
-        });
-
-        // 檢查是否是創建新房間還是加入現有房間
+        // 如果是創建新房間
         if (creating === '1') {
-            // 如果是創建新房間，不需要密碼驗證
             currentRoom = roomId;
             socket.join(roomId);
-        } else {
-            // 如果是加入現有房間
-            // 先檢查房間是否存在
-            if (!room) {
+            return;
+        }
+        
+        // 如果是加入現有房間
+        // 先檢查房間是否存在
+        if (!room) {
+            socket.emit('error', {
+                type: 'auth',
+                message: 'room_not_found'  // 特殊標記，表示房間不存在
+            });
+            return;
+        }
+        
+        // 檢查是否需要密碼
+        if (storedPassNeedId && storedPassNeedId !== 'false') {
+            // 如果沒有提供密碼，直接要求輸入密碼
+            if (!password) {
                 socket.emit('error', {
                     type: 'auth',
-                    message: '房間不存在'
+                    message: 'need_password'  // 特殊標記，表示需要密碼
                 });
                 return;
             }
             
-            // 如果房間需要密碼
-            if (storedPassNeedId && storedPassNeedId !== 'false') {
-                // 如果沒有提供密碼，發送需要密碼的信號
-                if (!password) {
-                    socket.emit('error', {
-                        type: 'auth',
-                        message: 'need_password'
-                    });
-                    return;
-                }
-                // 檢查密碼是否正確
-                if (password !== storedPassword) {
-                    socket.emit('error', {
-                        type: 'auth',
-                        message: '密碼錯誤'
-                    });
-                    return;
-                }
+            // 如果提供了密碼但密碼錯誤
+            if (password !== storedPassword) {
+                socket.emit('error', {
+                    type: 'auth',
+                    message: 'wrong_password'  // 特殊標記，表示密碼錯誤
+                });
+                return;
             }
         }
         
+        // 通過所有驗證，加入房間
         currentRoom = roomId;
         socket.join(roomId);
-        
-        // 如果是創建房間的用戶，立即發送一個空的用戶列表
-        if (creating === '1') {
-            socket.emit('userList', []);
-        }
-        
-        // 請求用戶列表更新
-        socket.emit('requestUserList');
     } else {
         // 加入公共聊天室
         currentRoom = 'public';

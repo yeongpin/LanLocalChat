@@ -65,6 +65,7 @@
     "shareWithPassword": "包含密碼分享",
     "includePassword": "是否包含密碼一起分享？",
     "copied": "已複製到剪貼板",
-    "leaveToPublic": "返回公共聊天室"
+    "leaveToPublic": "返回公共聊天室",
+    "needPassword": "需要密碼"
   }
 } 

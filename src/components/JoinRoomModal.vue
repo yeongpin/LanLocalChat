@@ -3,19 +3,21 @@
     <button class="close-btn" @click="$emit('close')">
       <i class="fas fa-times"></i>
     </button>
-    <h2>{{ t('room.join') }}</h2>
+    <h2>{{ t('room.needPassword') }}</h2>
     <div class="form-group">
-      <label>{{ t('room.password') }}</label>
+      <label for="password">{{ t('room.password') }}</label>
       <input 
         type="password" 
-        v-model="password"
+        id="password" 
+        v-model="password" 
         :placeholder="t('room.passwordPlaceholder')"
         ref="passwordInput"
         @keyup.enter="joinRoom"
       >
     </div>
     <div class="button-group">
-      <button @click="joinRoom">{{ t('room.join') }}</button>
+      <button @click="joinRoom" class="primary">{{ t('room.join') }}</button>
+      <button @click="$emit('close')" class="secondary">{{ t('login.cancel') }}</button>
     </div>
   </div>
 </template>
@@ -24,41 +26,39 @@
 export default {
   name: 'JoinRoomModal',
   props: {
-    roomId: {
-      type: String,
-      required: true
-    },
     localeData: {
       type: Object,
-      required: false,
-      default: () => ({
-        room: {
-          join: '加入房間',
-          password: '密碼',
-          passwordPlaceholder: '輸入房間密碼'
-        }
-      })
+      required: true
+    },
+    currentRoomId: {
+      type: String,
+      required: true
     }
   },
   data() {
     return {
-      password: ''
+      roomId: this.currentRoomId,
+      password: '',
+      needPassword: false
     }
-  },
-  mounted() {
-    this.$refs.passwordInput.focus();
   },
   methods: {
     t(path) {
-      if (!this.localeData) return path;
       return path.split('.').reduce((acc, part) => acc && acc[part], this.localeData) || path;
     },
-    joinRoom() {
-      this.$emit('join', {
-        roomId: this.roomId,
-        password: this.password
-      });
-      this.password = '';
+    async joinRoom() {
+      if (!this.password) {
+        alert(this.t('room.passwordRequired'));
+        return;
+      }
+      
+      // 構建房間URL，保留原有的參數
+      const currentUrl = new URL(window.location.href);
+      const params = currentUrl.searchParams;
+      params.set('pass', this.password);
+      
+      // 重定向到房間
+      window.location.href = `/?${params.toString()}`;
     }
   }
 }
@@ -105,7 +105,7 @@ label {
 }
 
 input {
-  width: 100%;
+  width: 95%;
   padding: 8px;
   border: 1px solid var(--border-color);
   border-radius: 4px;

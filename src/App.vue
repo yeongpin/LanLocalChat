@@ -74,6 +74,14 @@
         :socket="socket"
       />
     </div>
+    <div v-if="showJoinRoomModal" class="modal-overlay">
+      <join-room-modal
+        class="room-modal"
+        @close="showJoinRoomModal = false"
+        :localeData="localeData"
+        :currentRoomId="currentRoomId"
+      />
+    </div>
   </div>
 </template>
 
@@ -86,6 +94,7 @@ import MessageList from './components/MessageList.vue';
 import UserList from './components/UserList.vue';
 import ChatInput from './components/ChatInput.vue';
 import CreateRoomModal from './components/CreateRoomModal.vue';
+import JoinRoomModal from './components/JoinRoomModal.vue';
 
 export default {
   name: 'App',
@@ -94,7 +103,8 @@ export default {
     MessageList,
     UserList,
     ChatInput,
-    CreateRoomModal
+    CreateRoomModal,
+    JoinRoomModal
   },
   data() {
     return {
@@ -124,6 +134,7 @@ export default {
       reconnectAttempts: 0,
       maxReconnectAttempts: 5,
       showRoomModal: false,
+      showJoinRoomModal: false,
       currentRoomId: new URLSearchParams(window.location.search).get('chat_id') || 'public',
     };
   },
@@ -253,23 +264,29 @@ export default {
       // 處理錯誤消息
       this.socket.on('error', (error) => {
         if (error.type === 'auth') {
-          // 如果需要密碼，顯示密碼輸入框
-          if (error.message === 'need_password') {
-            const password = prompt(this.t('room.passwordRequired'));
-            if (password) {
-              // 添加密碼到 URL 並重新加載
-              const url = new URL(window.location.href);
-              url.searchParams.set('pass', password);
-              window.location.href = url.toString();
-            } else {
-              // 如果用戶取消輸入密碼，返回公共聊天室
+          // 根據不同的錯誤類型顯示不同的處理方式
+          switch (error.message) {
+            case 'need_password':
+              // 顯示加入房間的模態框
+              this.showJoinRoomModal = true;
+              break;
+            case 'wrong_password':
+              // 先顯示加入房間的模態框
+              this.showJoinRoomModal = true;
+              // 然後顯示錯誤消息
+              this.$nextTick(() => {
+                alert(this.t('room.invalidPassword'));
+              });
+              break;
+            case 'room_not_found':
+              alert(this.t('room.roomNotFound'));
               window.location.href = '/?chat_id=public';
-            }
-            return;
+              break;
+            default:
+              alert(error.message);
+              window.location.href = '/?chat_id=public';
+              break;
           }
-          alert(error.message);
-          // 如果是認證錯誤，重定向到公共聊天室
-          window.location.href = '/?chat_id=public';
         }
       });
       
