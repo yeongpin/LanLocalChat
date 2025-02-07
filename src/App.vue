@@ -136,6 +136,8 @@ export default {
       showRoomModal: false,
       showJoinRoomModal: false,
       currentRoomId: new URLSearchParams(window.location.search).get('chat_id') || 'public',
+      notificationSound: null,
+      audioContext: null,
     };
   },
   computed: {
@@ -375,6 +377,7 @@ export default {
         return;
       }
       this.username = username;
+      this.initAudio();
       if (this.isConnected) {
         this.socket.emit('join', this.username);
       }
@@ -398,22 +401,43 @@ export default {
     loadHistory() {
       this.socket.emit('requestHistory');
     },
+    initAudio() {
+      // 初始化音頻上下文
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // 初始化音頻元素
+      if (!this.notificationSound) {
+        this.notificationSound = new Audio('/sounds/notification.mp3');
+        this.notificationSound.volume = 0.5;
+      }
+    },
     playNotificationSound() {
-      // 使用 Web Audio API 創建提示音
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // 設置音量
-      gainNode.gain.value = 0.1;
-      
-      // 設置音調和持續時間
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.1); // 持續 0.1 秒
+      try {
+        if (!this.notificationSound) {
+          this.initAudio();
+        }
+
+        if (this.audioContext?.state === 'suspended') {
+          this.audioContext.resume();
+        }
+
+        if (this.notificationSound.paused) {
+          this.notificationSound.currentTime = 0;
+          this.notificationSound.play()
+            .catch(err => {
+              console.warn('需要用戶交互才能播放音效');
+              // 添加視覺提示
+              const notification = document.createElement('div');
+              notification.className = 'visual-notification';
+              notification.textContent = '🔔';
+              document.body.appendChild(notification);
+              setTimeout(() => notification.remove(), 1000);
+            });
+        }
+      } catch (err) {
+        console.error('音效播放錯誤:', err);
+      }
     },
     showCreateRoom() {
       this.showRoomModal = true;
@@ -628,5 +652,23 @@ body {
 .share-room:hover {
   background-color: var(--accent-hover-color);
   transform: scale(1.1);
+}
+
+.visual-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--accent-color);
+  color: white;
+  padding: 10px;
+  border-radius: 50%;
+  animation: fadeInOut 1s ease-in-out;
+  z-index: 1000;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(0.8); }
 }
 </style> 
