@@ -132,8 +132,17 @@ export default {
     async handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+      
+      if (this.uploadingFiles.length >= 3) {
+        alert(this.t('chat.fileLimit'));
+        return;
+      }
+      
+      // 添加到待上傳文件列表
       this.uploadingFiles.push(file);
-      this.$refs.fileInput.value = ''; // 重置 input
+      
+      // 清空文件輸入
+      this.$refs.fileInput.value = '';
     },
     removeFile(index) {
       this.uploadingFiles.splice(index, 1);
@@ -145,7 +154,13 @@ export default {
       if (!hasMessage && !hasFiles) return;
       
       if (hasMessage) {
-        this.$emit('send-message', this.message);
+        this.$emit('send-message', {
+          type: 'text',
+          content: this.message,
+          timestamp: Date.now(),
+          mentions: [],
+          user: ''
+        });
         this.message = '';
       }
       
@@ -157,9 +172,15 @@ export default {
             const response = await axios.post('/upload', formData);
             this.$emit('send-message', {
               type: 'file',
-              name: file.name,
-              size: file.size,
-              path: response.data.path
+              content: {
+                type: 'file',
+                name: file.name,
+                size: file.size,
+                path: response.data.path
+              },
+              timestamp: Date.now(),
+              mentions: [],
+              user: ''
             });
           } catch (error) {
             console.error('File upload failed:', error);
