@@ -42,12 +42,16 @@ const upload = multer({
 });
 
 // 在線用戶列表
-let onlineUsers = new Map();
+let publicUsers = new Map();  // 公共聊天室用戶
+let privateUsers = new Map(); // 私人房間用戶
 let userSockets = new Map();
 let disconnectTimers = new Map();
 let messageHistory = [];
 let originalUsernames = new Map();
 let joinMessages = new Set();  // 追踪已發送的加入消息
+let rooms = new Map(); // 存儲房間信息
+let roomUsers = new Map(); // 存儲每個房間的用戶
+let roomMessages = new Map(); // 存儲每個房間的消息
 
 // 追踪斷開連接的計時器
 const RECONNECT_TIMEOUT = 1000;
@@ -57,7 +61,7 @@ const MESSAGE_DEBOUNCE = 2000;
 
 // 檢查並清理過期的用戶
 function cleanupStaleUsers() {
-    for (const [socketId, username] of onlineUsers.entries()) {
+    for (const [socketId, username] of publicUsers.entries()) {
         if (!io.sockets.sockets.has(socketId)) {
             cleanupUser(socketId);
         }
@@ -77,11 +81,11 @@ function cleanupJoinMessages() {
 
 // 清理用戶
 function cleanupUser(socketId) {
-    const username = onlineUsers.get(socketId);
+    const username = publicUsers.get(socketId);
     if (username) {
         // 檢查是否有其他相同用戶名的連接
         let hasOtherConnection = false;
-        for (const [otherSocketId, otherUsername] of onlineUsers.entries()) {
+        for (const [otherSocketId, otherUsername] of publicUsers.entries()) {
             if (otherSocketId !== socketId && otherUsername === username) {
                 hasOtherConnection = true;
                 break;
@@ -99,7 +103,7 @@ function cleanupUser(socketId) {
         }
 
         userSockets.delete(username);
-        onlineUsers.delete(socketId);
+        publicUsers.delete(socketId);
         originalUsernames.delete(socketId);
         return username;
     }
@@ -108,7 +112,7 @@ function cleanupUser(socketId) {
 
 // 檢查用戶名是否可用
 function isUsernameAvailable(username, currentSocketId) {
-    for (const [socketId, name] of onlineUsers.entries()) {
+    for (const [socketId, name] of publicUsers.entries()) {
         if (name === username && socketId !== currentSocketId) {
             return false;
         }
@@ -119,8 +123,31 @@ function isUsernameAvailable(username, currentSocketId) {
 // 存儲最近的消息
 const MAX_HISTORY = 100; // 保存最近100條消息
 
+// 檢查是否是私人房間
+function isPrivateRoom(socket) {
+  const query = socket.handshake.query;
+  return query.chat_id && query.private === '1';
+}
+
 // Socket.IO 連接處理
 io.on('connection', (socket) => {
+    let currentRoom = null;
+    const isPrivate = socket.handshake.query.private === '1';
+    const roomId = socket.handshake.query.chat_id || 'public';
+
+    // 根據房間類型選擇用戶列表
+    const getUserList = () => {
+        if (roomId === 'public') {
+            return publicUsers;
+        }
+        return privateUsers;
+    };
+
+    if (roomId !== 'public') {
+        currentRoom = roomId;
+        socket.join(roomId);
+    }
+
     console.log('用戶連接');
 
     // 清理過期的用戶
@@ -129,18 +156,51 @@ io.on('connection', (socket) => {
 
     // 處理用戶列表請求
     socket.on('requestUserList', () => {
-        const users = Array.from(onlineUsers.values());
+        let users;
+        if (currentRoom && currentRoom !== 'public') {
+            users = Array.from(roomUsers.get(currentRoom) || []);
+        } else {
+            users = Array.from(getUserList().values());
+        }
         socket.emit('userList', users);
     });
 
     // 處理歷史消息請求
     socket.on('requestHistory', () => {
-        socket.emit('chatHistory', messageHistory);
+        if (currentRoom && currentRoom !== 'public') {
+            socket.emit('chatHistory', roomMessages.get(currentRoom) || []);
+        } else {
+            socket.emit('chatHistory', messageHistory);
+        }
     });
 
     // 用戶加入
     socket.on('join', (username) => {
-        // 先清理舊的計時器
+        if (currentRoom && currentRoom !== 'public') {
+            // 初始化房間數據
+            if (!roomUsers.has(roomId)) {
+                roomUsers.set(roomId, new Set());
+                roomMessages.set(roomId, []);
+            }
+            
+            // 添加用戶到房間
+            roomUsers.get(roomId).add(username);
+            privateUsers.set(socket.id, username);
+            
+            // 發送房間用戶列表
+            io.to(roomId).emit('userList', Array.from(roomUsers.get(roomId)));
+            
+            // 發送加入消息只給房間內的用戶
+            io.to(roomId).emit('message', {
+                type: 'system',
+                content: `${username} 加入了私人房間`,
+                highlight: username,
+                action: 'join'
+            });
+            return;
+        }
+
+        // 公共聊天室的原有邏輯
         const oldTimer = disconnectTimers.get(username);
         if (oldTimer) {
             clearTimeout(oldTimer);
@@ -151,9 +211,9 @@ io.on('connection', (socket) => {
         
         // 避免相同名字的改名消息
         if (originalUsername === username) {
-            onlineUsers.set(socket.id, username);
+            publicUsers.set(socket.id, username);
             userSockets.set(username, socket.id);
-            io.emit('userList', Array.from(onlineUsers.values()));
+            io.emit('userList', Array.from(getUserList().values()));
             return;
         }
         
@@ -164,9 +224,9 @@ io.on('connection', (socket) => {
             username = newUsername;
         }
         
-        onlineUsers.set(socket.id, username);
+        publicUsers.set(socket.id, username);
         userSockets.set(username, socket.id);
-        io.emit('userList', Array.from(onlineUsers.values()));
+        io.emit('userList', Array.from(getUserList().values()));
         
         if (originalUsername) {
             io.emit('message', {
@@ -199,35 +259,70 @@ io.on('connection', (socket) => {
         // 檢查消息中的提及
         let mentions = [];
         if (typeof data === 'string') {
-          const mentionRegex = /@(\S+)/g;
-          mentions = [...data.matchAll(mentionRegex)].map(match => match[1]);
+            const mentionRegex = /@(\S+)/g;
+            mentions = [...data.matchAll(mentionRegex)].map(match => match[1]);
         }
 
         const messageData = {
+            user: currentRoom && currentRoom !== 'public' ? 
+                Array.from(roomUsers.get(currentRoom)).find(u => u === privateUsers.get(socket.id)) : 
+                publicUsers.get(socket.id),
             type: 'user',
-            user: onlineUsers.get(socket.id),
             content: data,
             timestamp: Date.now(),
             mentions: mentions
         };
 
-        // 添加到歷史記錄
+        // 如果是私人房間
+        if (currentRoom && currentRoom !== 'public') {
+            // 保存消息到房間歷史記錄
+            const roomHistory = roomMessages.get(currentRoom) || [];
+            roomHistory.push(messageData);
+            if (roomHistory.length > MAX_HISTORY) {
+                roomHistory.shift();
+            }
+            roomMessages.set(currentRoom, roomHistory);
+            
+            // 只發送給房間成員
+            io.to(currentRoom).emit('message', messageData);
+            
+            // 私人房間的提及通知只發送給房間內的用戶
+            if (mentions.length > 0) {
+                const mentionedSocketIds = Array.from(privateUsers.entries())
+                    .filter(([_, username]) => mentions.includes(username))
+                    .map(([socketId]) => socketId)
+                    .filter(socketId => io.sockets.adapter.rooms.get(currentRoom)?.has(socketId));
+
+                mentionedSocketIds.forEach(socketId => {
+                    io.to(socketId).emit('mentioned', {
+                        from: privateUsers.get(socket.id),
+                        message: data
+                    });
+                });
+            }
+            return;
+        }
+
+        // 公共聊天室的消息處理
         messageHistory.push(messageData);
         if (messageHistory.length > MAX_HISTORY) {
             messageHistory.shift();
         }
+        // 只發送給公共聊天室的用戶
+        const publicRoomSockets = Array.from(publicUsers.keys());
+        publicRoomSockets.forEach(socketId => {
+            io.to(socketId).emit('message', messageData);
+        });
 
-        io.emit('message', messageData);
-
-        // 發送提及通知
+        // 發送提及通知（只給公共聊天室的用戶）
         if (mentions.length > 0) {
-            const mentionedSocketIds = Array.from(onlineUsers.entries())
+            const mentionedSocketIds = Array.from(publicUsers.entries())
                 .filter(([_, username]) => mentions.includes(username))
                 .map(([socketId]) => socketId);
 
             mentionedSocketIds.forEach(socketId => {
                 io.to(socketId).emit('mentioned', {
-                    from: onlineUsers.get(socket.id),
+                    from: publicUsers.get(socket.id),
                     message: data
                 });
             });
@@ -237,11 +332,37 @@ io.on('connection', (socket) => {
     // 處理斷開連接
     socket.on('disconnect', () => {
         console.log('用戶斷開連接');
-        const username = onlineUsers.get(socket.id);
+        let username;
+        if (currentRoom && currentRoom !== 'public') {
+            username = Array.from(roomUsers.get(currentRoom)).find(u => u === privateUsers.get(socket.id));
+        } else {
+            username = getUserList().get(socket.id);
+        }
+        
+        // 如果是私人房間的用戶
+        if (currentRoom && currentRoom !== 'public') {
+            const roomUsersList = roomUsers.get(currentRoom);
+            if (roomUsersList && username) {
+                roomUsersList.delete(username);
+                privateUsers.delete(socket.id);
+                io.to(currentRoom).emit('userList', Array.from(roomUsersList));
+                io.to(currentRoom).emit('message', {
+                    type: 'system',
+                    content: `${username} 離開了私人房間`,
+                    highlight: username,
+                    action: 'leave'
+                });
+            }
+            return;
+        }
+
+        // 公共聊天室的斷開連接處理
         if (username) {
             const timer = setTimeout(() => {
-                cleanupUser(socket.id);
-                io.emit('userList', Array.from(onlineUsers.values()));
+                if (publicUsers.has(socket.id)) {
+                    publicUsers.delete(socket.id);
+                    io.emit('userList', Array.from(publicUsers.values()));
+                }
                 disconnectTimers.delete(username);
                 originalUsernames.delete(socket.id);
             }, RECONNECT_TIMEOUT);

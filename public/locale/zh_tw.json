@@ -45,5 +45,24 @@
     "systemLeave": "離開了聊天室",
     "download": "下載",
     "preview": "預覽"
+  },
+  "room": {
+    "create": "創建私人房間",
+    "join": "加入房間",
+    "name": "房間名稱",
+    "namePlaceholder": "輸入房間名稱",
+    "usePassword": "使用密碼保護",
+    "password": "密碼",
+    "passwordPlaceholder": "輸入房間密碼",
+    "nameRequired": "請輸入房間名稱",
+    "passwordRequired": "請輸入房間密碼",
+    "created": "房間創建成功",
+    "joined": "已加入房間",
+    "left": "已離開房間",
+    "invalidPassword": "密碼錯誤",
+    "roomNotFound": "找不到房間",
+    "shareRoom": "分享房間",
+    "shareWithPassword": "包含密碼分享",
+    "copied": "已複製到剪貼板"
   }
 } 

@@ -1,6 +1,9 @@
 <template>
   <div class="chat-container">
     <div class="floating-container">
+      <button class="floating-button" @click="showCreateRoom">
+        <i class="fas fa-comments"></i>
+      </button>
       <button class="floating-button" @click="toggleLanguageMenu">
         <i class="fas fa-globe"></i>
       </button>
@@ -46,6 +49,14 @@
         :localeData="localeData"
       />
     </div>
+    <div v-if="showRoomModal" class="modal-overlay">
+      <create-room-modal
+        class="room-modal"
+        @close="showRoomModal = false"
+        @create="handleCreateRoom"
+        :localeData="localeData"
+      />
+    </div>
   </div>
 </template>
 
@@ -57,6 +68,7 @@ import LoginForm from './components/LoginForm.vue';
 import MessageList from './components/MessageList.vue';
 import UserList from './components/UserList.vue';
 import ChatInput from './components/ChatInput.vue';
+import CreateRoomModal from './components/CreateRoomModal.vue';
 
 export default {
   name: 'App',
@@ -64,7 +76,8 @@ export default {
     LoginForm,
     MessageList,
     UserList,
-    ChatInput
+    ChatInput,
+    CreateRoomModal
   },
   data() {
     return {
@@ -92,7 +105,8 @@ export default {
       showLanguageMenu: false,
       isConnected: false,
       reconnectAttempts: 0,
-      maxReconnectAttempts: 5
+      maxReconnectAttempts: 5,
+      showRoomModal: false
     };
   },
   computed: {
@@ -104,14 +118,35 @@ export default {
     // 每次打開新標籤頁生成新的用戶名
     this.username = `User-${Math.random().toString(36).substr(2, 6)}`;
     
+    // 如果沒有 chat_id 參數，重定向到公共聊天室
+    if (!window.location.search.includes('chat_id')) {
+      window.history.replaceState({}, '', '/?chat_id=public');
+    }
+    
+    // 檢查URL是否包含房間ID
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get('chat_id');
+    const isPrivate = params.get('private') === '1';
+    
     const serverUrl = `http://${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT || 13000}`;
-    this.socket = io(serverUrl, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
-    });
-    this.setupSocketListeners();
+    
+    // 確保服務器正在運行
+    try {
+      this.socket = io(serverUrl, {
+        query: {
+          chat_id: params.get('chat_id') || 'public',
+          private: isPrivate ? '1' : '0'
+        },
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5
+      });
+      
+      this.setupSocketListeners();
+    } catch (error) {
+      console.error('Failed to connect to server:', error);
+    }
     
     // 從 localStorage 獲取語言設置
     const savedLocale = localStorage.getItem('locale') || 'zh_tw';
@@ -309,6 +344,14 @@ export default {
       oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.1); // 持續 0.1 秒
+    },
+    showCreateRoom() {
+      this.showRoomModal = true;
+    },
+    handleCreateRoom(roomData) {
+      // 處理創建房間的邏輯
+      console.log('Creating room:', roomData);
+      this.showRoomModal = false;
     }
   }
 };

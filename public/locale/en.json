@@ -45,5 +45,23 @@
     "systemLeave": "left the chat",
     "download": "Download",
     "preview": "Preview"
+  },
+  "room": {
+    "create": "Create Private Room",
+    "usePassword": "Use Password Protection",
+    "password": "Password",
+    "passwordPlaceholder": "Enter Room Password",
+    "nameRequired": "Please enter a room name",
+    "created": "Room created successfully",
+    "joined": "Joined Room",
+    "left": "Left Room",
+    "invalidPassword": "Invalid Password",
+    "roomNotFound": "Room Not Found",
+    "shareRoom": "Share Room",
+    "shareWithPassword": "Share with Password",
+    "copied": "Copied to clipboard"
+
   }
+
+
 } 
