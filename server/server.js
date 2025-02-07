@@ -13,12 +13,77 @@ const path = require('path');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const fs = require('fs');
+const { promisify } = require('util');
+const stat = promisify(fs.stat);
+const unlink = promisify(fs.unlink);
+const readdir = promisify(fs.readdir);
 dotenv.config();
 
 // 設置靜態文件目錄
 app.use(cors());  // 允許所有跨域請求
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
+
+// 解析時間字符串，如 "7d", "24h", "30m", "60s"
+function parseTimeString(timeStr) {
+    const regex = /^(\d+)([dhms])$/;
+    const matches = timeStr.match(regex);
+    if (!matches) return 0;
+
+    const value = parseInt(matches[1]);
+    const unit = matches[2];
+    
+    switch (unit) {
+        case 'd': return value * 24 * 60 * 60 * 1000;
+        case 'h': return value * 60 * 60 * 1000;
+        case 'm': return value * 60 * 1000;
+        case 's': return value * 1000;
+        default: return 0;
+    }
+}
+
+// 清理過期的文件和消息
+async function cleanup() {
+    const now = Date.now();
+    const historyRetention = parseTimeString(process.env.HISTORY_RETENTION || '7d');
+    const uploadsRetention = parseTimeString(process.env.UPLOADS_RETENTION || '1d');
+
+    try {
+        // 清理歷史消息
+        messageHistory = messageHistory.filter(msg => {
+            return (now - msg.timestamp) < historyRetention;
+        });
+
+        // 清理上傳文件
+        const uploadsDir = path.join(__dirname, 'uploads');
+        const files = await readdir(uploadsDir);
+
+        for (const file of files) {
+            const filePath = path.join(uploadsDir, file);
+            try {
+                const stats = await stat(filePath);
+                const fileAge = now - stats.mtime.getTime();
+
+                if (fileAge > uploadsRetention) {
+                    await unlink(filePath);
+                    console.log(`Deleted expired file: ${file}`);
+                }
+            } catch (err) {
+                console.error(`Error processing file ${file}:`, err);
+            }
+        }
+    } catch (err) {
+        console.error('Cleanup error:', err);
+    }
+}
+
+// 設置定期清理
+const cleanupInterval = parseTimeString(process.env.CLEANUP_INTERVAL || '1h');
+if (cleanupInterval > 0) {
+    setInterval(cleanup, cleanupInterval);
+    // 啟動時執行一次清理
+    cleanup();
+}
 
 // 檢查房間API
 app.get('/api/checkRoom', (req, res) => {
@@ -152,6 +217,14 @@ io.on('connection', (socket) => {
     const password = socket.handshake.query.pass;
     const passNeed = socket.handshake.query.pass_need;
     const creating = socket.handshake.query.creating;
+
+    // 發送未過期的歷史消息
+    const now = Date.now();
+    const historyRetention = parseTimeString(process.env.HISTORY_RETENTION || '7d');
+    const validHistory = messageHistory.filter(msg => 
+        (now - msg.timestamp) < historyRetention
+    );
+    socket.emit('history', validHistory);
 
     // 將用戶添加到對應的房間
     const addUserToRoom = (username) => {
