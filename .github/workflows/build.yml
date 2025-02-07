@@ -84,22 +84,34 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-      - name: Download All Artifacts
+      - name: Download Web Artifact
         uses: actions/download-artifact@v4
-        
+        with:
+          name: vite_web
+      
+      - name: Download Server Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: server_builds
+
       - name: Prepare Release Files
         run: |
           mkdir release
-          cp -r vite_web/* release/
+          
+          cp -r vite_web/dist/* release/
+          
           mkdir -p release/server
-          cp server-*/* release/server/
+          mv server_builds/lanchat-linux* release/server/
+          mv server_builds/lanchat-win* release/server/
+          mv server_builds/lanchat-mac* release/server/
+
           cd release
           zip -r ../lanchat-web.zip .
-          cd ..
-          zip -r lanchat-linux.zip server-linux/*
-          zip -r lanchat-win.zip server-win/*
-          zip -r lanchat-mac.zip server-mac/*
-          
+          cd server
+          zip -r ../../lanchat-linux.zip lanchat-linux*
+          zip -r ../../lanchat-win.zip lanchat-win*
+          zip -r ../../lanchat-mac.zip lanchat-mac*
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -111,4 +123,4 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ github.token }} 
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
