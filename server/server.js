@@ -19,10 +19,28 @@ const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
 dotenv.config();
 
+// 存儲最近的消息
+const MAX_HISTORY = 100; // 保存最近100條消息
+let messageHistory = [];
+
+// 在線用戶列表
+let publicUsers = new Map();  // 格式: socketId -> { id: number, user: string, type: 'public', chat_id: 'public' }
+let privateUsers = new Map(); // 格式: socketId -> { id: number, user: string, type: 'private', chat_id: string }
+let userIdCounter = 0;  // 用戶 ID 計數器
+let userSockets = new Map();
+let disconnectTimers = new Map();
+let originalUsernames = new Map();
+let joinMessages = new Set();  // 追踪已發送的加入消息
+let rooms = new Map(); // 存儲房間信息
+let roomUsers = new Map(); // 存儲每個房間的用戶
+let roomMessages = new Map(); // 存儲每個房間的消息
+let roomPasswords = new Map(); // 存儲房間密碼
+let roomPassNeedIds = new Map(); // 存儲房間密碼需求標識
+
 // 設置靜態文件目錄
 app.use(cors());  // 允許所有跨域請求
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 解析時間字符串，如 "7d", "24h", "30m", "60s"
 function parseTimeString(timeStr) {
@@ -98,7 +116,7 @@ app.get('/api/checkRoom', (req, res) => {
 });
 
 // 確保上傳目錄存在
-const uploadDir = path.join(__dirname, '../uploads');
+const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -117,27 +135,6 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
-
-// 在線用戶列表
-let publicUsers = new Map();  // 格式: socketId -> { id: number, user: string, type: 'public', chat_id: 'public' }
-let privateUsers = new Map(); // 格式: socketId -> { id: number, user: string, type: 'private', chat_id: string }
-let userIdCounter = 0;  // 用戶 ID 計數器
-let userSockets = new Map();
-let disconnectTimers = new Map();
-let messageHistory = [];
-let originalUsernames = new Map();
-let joinMessages = new Set();  // 追踪已發送的加入消息
-let rooms = new Map(); // 存儲房間信息
-let roomUsers = new Map(); // 存儲每個房間的用戶
-let roomMessages = new Map(); // 存儲每個房間的消息
-let roomPasswords = new Map(); // 存儲房間密碼
-let roomPassNeedIds = new Map(); // 存儲房間密碼需求標識
-
-// 追踪斷開連接的計時器
-const RECONNECT_TIMEOUT = 1000;
-
-// 防止重複消息的超時時間
-const MESSAGE_DEBOUNCE = 2000;
 
 // 檢查並清理過期的用戶
 function cleanupStaleUsers() {
@@ -199,9 +196,6 @@ function isUsernameAvailable(username, currentSocketId) {
     }
     return true;
 }
-
-// 存儲最近的消息
-const MAX_HISTORY = 100; // 保存最近100條消息
 
 // 檢查是否是私人房間
 function isPrivateRoom(socket) {
