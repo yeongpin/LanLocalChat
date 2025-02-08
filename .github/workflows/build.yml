@@ -125,7 +125,5 @@ jobs:
             artifacts/lanchat-linux.zip
             artifacts/lanchat-windows.zip
             artifacts/lanchat-macos.zip
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
