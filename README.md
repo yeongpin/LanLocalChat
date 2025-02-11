@@ -90,6 +90,7 @@ UPLOADS_RETENTION=1d      # 上傳文件保留時間
 npm run build:all
 ```
 會Build vite 到 dist 文件夾，並部署在 0.0.0.0:13050 下面，直接訪問 IP:13050 即可
+
 如想要手動Build,請運行
 ```
 npm run build
