@@ -70,6 +70,21 @@ npm run server
 npm run dev
 ```
 
+### 4️⃣ 修改 .env 文件
+請把 .env.example 複製一份，改名為 .env，並修改以下內容
+```
+SERVER_PORT=13050 # 服務器端口
+PUBLIC_PORT=5173 # 前端端口
+HOST=0.0.0.0 # 服務器地址
+PUBLIC_HOST=0.0.0.0 # 前端地址
+VITE_SERVER_PORT=13050 # 服務器端口
+VITE_NAME_LIMIT=20 # 用戶名長度限制
+# 歷史記錄和上傳文件的保留時間 (0d0h0m0s 表示立即清理)
+CLEANUP_INTERVAL=1h        # 清理檢查間隔
+HISTORY_RETENTION=7d      # 歷史記錄保留時間
+UPLOADS_RETENTION=1d      # 上傳文件保留時間
+```
+
 ## 🌐 部署在服務器
 ```
 npm run build:all
