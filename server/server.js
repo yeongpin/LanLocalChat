@@ -18,6 +18,7 @@ const stat = promisify(fs.stat);
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
 const os = require('os');
+const net = require('net');
 dotenv.config();
 
 // 存儲最近的消息
@@ -62,7 +63,12 @@ const uploadDir = getUploadsDir();
 
 // 設置靜態文件目錄和跨域
 app.use(cors());  // 允許所有跨域請求
-app.use(express.static('public'));
+const distPath = path.join(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+} else {
+  app.use(express.static('public'));
+}
 app.use('/uploads', express.static(uploadDir));
 
 // 解析時間字符串，如 "7d", "24h", "30m", "60s"
@@ -657,9 +663,51 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// 啟動服務器
-const PORT = process.env.SERVER_PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
-http.listen(PORT, HOST, () => {
-    console.log(`Server running on http://${HOST}:${PORT}`);
-}); 
+// 所有請求都返回 index.html
+app.get('*', (req, res) => {
+  const indexPath = path.join(__dirname, '../dist/index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  }
+});
+
+// 檢查端口是否可用
+async function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => {
+      resolve(false);
+    });
+    server.once('listening', () => {
+      server.close();
+      resolve(true);
+    });
+    server.listen(port, '0.0.0.0');
+  });
+}
+
+// 尋找可用端口
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  while (!(await isPortAvailable(port))) {
+    console.log(`Port ${port} is in use, trying ${port + 1}...`);
+    port++;
+  }
+  return port;
+}
+
+// 使用異步啟動服務器
+(async () => {
+  const startPort = parseInt(process.env.SERVER_PORT) || 13000;
+  const PORT = await findAvailablePort(startPort);
+  
+  http.listen(PORT, process.env.HOST || '0.0.0.0', () => {
+    console.log(`Server running on http://${process.env.HOST || '0.0.0.0'}:${PORT}`);
+    // 如果端口不是原始端口，提示用戶
+    if (PORT !== startPort) {
+      console.log(`Original port ${startPort} was in use, using port ${PORT} instead`);
+    }
+  });
+})(); 

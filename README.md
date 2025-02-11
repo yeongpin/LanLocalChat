@@ -70,6 +70,31 @@ npm run server
 npm run dev
 ```
 
+## 🌐 部署在服務器
+```
+npm run build:all
+```
+會部署在 0.0.0.0:13050 下面，直接訪問 IP:13050 即可
+
+## 🌐 使用nginx 反向代理
+```
+server {
+    listen 80;
+    server_name localhost;
+    
+    # 添加这一行来增加上传大小限制
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:13050;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
 
 ## 🛠 技術棧
 
