@@ -14,6 +14,9 @@
 [![Stars](https://img.shields.io/github/stars/yeongpin/LanLocalChat?style=flat-square&logo=github)](https://github.com/yeongpin/LanLocalChat/stargazers)
 
 </p>
+<p align="center">
+<img src="./images/send_2025-02-11_10-14-56.png" width="400" height="400"/>
+</p>
 </div>
 
 ## 📝 項目介紹
@@ -45,6 +48,10 @@
 
 
 ## 🚀 快速開始
+```
+git clone https://github.com/yeongpin/LanLocalChat.git
+cd LanLocalChat
+```
 
 ### 1️⃣ 安裝依賴
 ```
@@ -91,6 +98,16 @@ npm run dev
 <a href="https://github.com/yeongpin">
   <img src="https://github.com/yeongpin.png" width="50" height="50" style="border-radius:50%"/>
 </a>
+
+## 🎨 預覽圖
+<details>
+<summary>預覽圖</summary>
+<p align="center">
+<img src="./images/send_2025-02-11_10-14-56.png" width="400" height="400"/>
+<img src="./images/mention_2025-02-11_10-15-27.png" width="400" height="400"/>
+<img src="./images/send_2025-02-11_10-13-23.png" width="400" height="400"/>
+</p>
+</details>
 
 ## 📝 更新日誌
 
