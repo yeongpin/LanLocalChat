@@ -38,15 +38,15 @@ export default {
 
 <style scoped>
 .file-card {
-  display: inline-flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 300px;
-  padding: 8px;
-  background: var(--input-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-}
+    display: inline-flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 95%;
+    padding: 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+  }
 
 .file-info {
   display: flex;

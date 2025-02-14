@@ -162,4 +162,33 @@ i.fas.fa-edit {
   color: var(--text-secondary);
   opacity: 0.7;
 }
+
+@media (max-width: 768px) {
+  .user-list {
+    grid-column: unset;
+    height: calc(100vh - 60px);
+    margin-top: 40px;
+    border: none;
+    padding: 10px;
+  }
+
+  .user-list-title {
+    text-align: center;
+    justify-content: center;
+    padding: 15px 0;
+    margin-bottom: 15px;
+  }
+
+  .user-item {
+    padding: 12px 15px;
+    margin: 5px 0;
+    border-radius: 8px;
+    background: var(--input-bg);
+  }
+
+  .change-name-btn {
+    opacity: 1;
+    font-size: 1.1em;
+  }
+}
 </style> 

@@ -1,6 +1,13 @@
 <template>
   <div class="chat-container">
     <div class="floating-container">
+      <button 
+        class="floating-button mobile-user-btn"
+        @click="toggleMobileUserList"
+        :title="t('user.online')"
+      >
+        <i class="fas fa-users"></i>
+      </button>
       <button class="floating-button" @click="showCreateRoom">
         <i class="fas fa-comments"></i>
       </button>
@@ -44,12 +51,14 @@
         @load-history="loadHistory" 
         :localeData="localeData"
       />
-      <user-list 
-        :users="onlineUsers" 
-        :current-user="username"
-        @show-name-editor="showNameEditor" 
-        :localeData="localeData"
-      />
+      <div class="desktop-user-list">
+        <user-list 
+          :users="onlineUsers" 
+          :current-user="username"
+          @show-name-editor="showNameEditor" 
+          :localeData="localeData"
+        />
+      </div>
       <chat-input 
         @send-message="handleSendMessage" 
         :users="filteredUsers"
@@ -80,6 +89,17 @@
         @close="showJoinRoomModal = false"
         :localeData="localeData"
         :currentRoomId="currentRoomId"
+      />
+    </div>
+    <div class="mobile-user-list" :class="{ 'show': showMobileUserList }">
+      <button class="close-btn" @click="showMobileUserList = false">
+        <i class="fas fa-times"></i>
+      </button>
+      <user-list 
+        :users="onlineUsers" 
+        :current-user="username"
+        @show-name-editor="showNameEditor" 
+        :localeData="localeData"
       />
     </div>
   </div>
@@ -139,6 +159,7 @@ export default {
       currentRoomId: new URLSearchParams(window.location.search).get('chat_id') || 'public',
       notificationSound: null,
       audioContext: null,
+      showMobileUserList: false,
     };
   },
   computed: {
@@ -479,7 +500,10 @@ export default {
           alert(this.t('room.copied'));
         });
       }
-    }
+    },
+    toggleMobileUserList() {
+      this.showMobileUserList = !this.showMobileUserList;
+    },
   }
 };
 </script>
@@ -500,6 +524,7 @@ body {
   display: grid;
   grid-template-columns: 80px 1fr;
   gap: 20px;
+  overflow: hidden;
 }
 
 .chat-main {
@@ -511,6 +536,8 @@ body {
   border-radius: 8px;
   padding: 20px;
   grid-template-rows: 1fr auto;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .modal-overlay {
@@ -616,9 +643,13 @@ body {
 
 @media (max-width: 768px) {
   .chat-container {
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 50px 1fr;
     gap: 10px;
-    padding: 10px;
+    padding: 10px 0px;
+    height: 98vh;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
   }
 
   .floating-container {
@@ -632,6 +663,30 @@ body {
   .floating-button {
     width: 32px;
     height: 32px;
+  }
+
+  .mobile-user-btn {
+    display: flex !important;
+  }
+
+  .desktop-user-list {
+    display: none !important;
+  }
+
+  .chat-main {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 10px;
+    width: 90%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  /* 確保移動端消息列表佔滿寬度 */
+  .chat-main > *:first-child {
+    grid-column: 1 / -1;
+    width: 88%;
+    max-width: 100%;
   }
 }
 
@@ -671,5 +726,44 @@ body {
   0% { opacity: 0; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.2); }
   100% { opacity: 0; transform: scale(0.8); }
+}
+
+.mobile-user-btn {
+  display: none;
+}
+
+.desktop-user-list {
+  display: block;
+  width: 200px;
+}
+
+.mobile-user-list {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 100vh;
+  background: var(--bg-color);
+  border-left: 1px solid var(--border-color);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 999;
+  overflow-y: auto;
+}
+
+.mobile-user-list.show {
+  transform: translateX(0);
+}
+
+.mobile-user-list .close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 5px;
 }
 </style> 

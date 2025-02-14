@@ -182,10 +182,11 @@
     grid-column: 1;
     border: 1px solid var(--border-color);
     padding: 20px;
-    height: calc(95vh - 150px); /* 減去頂部間距、底部輸入框和padding */
+    height: calc(95vh - 150px);
     overflow-y: scroll;
     background-color: var(--bg-color);
     border-radius: 6px;
+    max-width: 100%;
   }
   
   /* 美化滾動條 */
@@ -304,9 +305,7 @@
     display: inline-flex;
     justify-content: space-between;
     align-items: center;
-    min-width: 200px;
-    max-width: 300px;
-    width: 300px;
+    width: 95%;
     padding: 8px;
     background: var(--input-bg);
     border: 1px solid var(--border-color);
@@ -396,5 +395,15 @@
   
   .history-btn i {
     font-size: 0.9em;
+  }
+  
+  @media (max-width: 768px) {
+    .chat-messages {
+      padding: 10px;
+      height: calc(98vh - 150px);
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+    }
   }
   </style> 

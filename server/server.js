@@ -704,7 +704,8 @@ async function findAvailablePort(startPort) {
   const PORT = await findAvailablePort(startPort);
   
   http.listen(PORT, process.env.HOST || '0.0.0.0', () => {
-    console.log(`Server running on http://${process.env.HOST || '0.0.0.0'}:${PORT}`);
+    console.log(`Server running on http://${process.env.HOST || '127.0.0.1'}:${PORT}`); 
+    console.log(`Server running on http://127.0.0.1:${PORT}`);
     // 如果端口不是原始端口，提示用戶
     if (PORT !== startPort) {
       console.log(`Original port ${startPort} was in use, using port ${PORT} instead`);
