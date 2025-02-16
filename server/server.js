@@ -19,6 +19,7 @@ const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
 const os = require('os');
 const net = require('net');
+const CryptoJS = require('crypto-js');
 dotenv.config();
 
 // 存儲最近的消息
@@ -38,6 +39,8 @@ let roomUsers = new Map(); // 存儲每個房間的用戶
 let roomMessages = new Map(); // 存儲每個房間的消息
 let roomPasswords = new Map(); // 存儲房間密碼
 let roomPassNeedIds = new Map(); // 存儲房間密碼需求標識
+
+const salt = process.env.VITE_MESSAGE_SALT || 'default-salt-value';
 
 // 獲取系統臨時目錄
 function getUploadsDir() {
@@ -469,13 +472,17 @@ io.on('connection', (socket) => {
     });
 
     // 處理消息
-    socket.on('message', (data) => {
-        // 如果收到的是字符串，轉換為標準消息格式
-        if (typeof data === 'string') {
-            data = {
-                content: data,
-                type: 'user'
-            };
+    socket.on('message', (msg) => {
+        // 如果是文本消息，解密內容
+        if (msg.type === 'text' && msg.content) {
+            console.log('服務器收到加密消息:', msg.content);
+            try {
+                const decrypted = CryptoJS.AES.decrypt(msg.content, salt);
+                msg.content = decrypted.toString(CryptoJS.enc.Utf8);
+                console.log('解密後:', msg.content);
+            } catch (error) {
+                console.error('Decryption error:', error);
+            }
         }
 
         // 獲取當前用戶
@@ -485,17 +492,17 @@ io.on('connection', (socket) => {
         
         // 檢查消息中的提及
         let mentions = [];
-        if (typeof data.content === 'string') {
+        if (typeof msg.content === 'string') {
             const mentionRegex = /@(\S+)/g;
-            mentions = [...data.content.matchAll(mentionRegex)]
+            mentions = [...msg.content.matchAll(mentionRegex)]
                 .map(match => match[1])
                 .filter(mention => mention !== currentUser);
         }
 
         const messageData = {
             user: currentUser,
-            type: data.type || 'user',
-            content: data.content,
+            type: msg.type || 'user',
+            content: msg.content,
             timestamp: Date.now(),
             mentions: mentions
         };
@@ -525,7 +532,7 @@ io.on('connection', (socket) => {
                 mentionedSocketIds.forEach(socketId => {
                     io.to(socketId).emit('mentioned', {
                         from: currentUser,
-                        message: data.content
+                        message: msg.content
                     });
                 });
             }
@@ -555,7 +562,7 @@ io.on('connection', (socket) => {
             mentionedSocketIds.forEach(socketId => {
                 io.to(socketId).emit('mentioned', {
                     from: currentUser,
-                    message: data.content
+                    message: msg.content
                 });
             });
         }

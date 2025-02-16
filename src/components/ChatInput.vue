@@ -55,6 +55,7 @@
 import axios from 'axios';
 import FileCard from './FileCard.vue';
 import { t } from '../utils/i18n';
+import CryptoJS from 'crypto-js';
 
 export default {
   name: 'ChatInput',
@@ -88,7 +89,8 @@ export default {
       showMentions: false,
       mentionFilter: '',
       mentionPosition: { top: 0, left: 0 },
-      currentMentionStart: -1
+      currentMentionStart: -1,
+      salt: import.meta.env.VITE_MESSAGE_SALT || 'default-salt-value'
     }
   },
   computed: {
@@ -147,6 +149,22 @@ export default {
     removeFile(index) {
       this.uploadingFiles.splice(index, 1);
     },
+    encryptMessage(message) {
+      try {
+        // 如果是文件類型，不加密
+        if (typeof message === 'object' && message.type === 'file') {
+          return message;
+        }
+        
+        // 加密文本消息
+        const encrypted = CryptoJS.AES.encrypt(message, this.salt);
+        const base64 = encrypted.toString();
+        return base64;
+      } catch (error) {
+        console.error('Encryption error:', error);
+        return message;
+      }
+    },
     async sendMessage() {
       const hasMessage = this.message.trim();
       const hasFiles = this.uploadingFiles.length > 0;
@@ -154,9 +172,15 @@ export default {
       if (!hasMessage && !hasFiles) return;
       
       if (hasMessage) {
+        // 加密消息內容
+        const encrypted = CryptoJS.AES.encrypt(this.message.trim(), this.salt);
+        const encryptedContent = encrypted.toString();
+        console.log('加密前:', this.message.trim());
+        console.log('加密後:', encryptedContent);
+        
         this.$emit('send-message', {
           type: 'text',
-          content: this.message,
+          content: encryptedContent,
           timestamp: Date.now(),
           mentions: [],
           user: ''
