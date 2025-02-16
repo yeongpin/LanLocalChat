@@ -91,7 +91,7 @@ i.fas.fa-edit {
   padding: 20px 5px;
   background-color: var(--bg-color);
   border-radius: 6px;
-  height: calc(95vh - 150px);
+  height: calc(95vh - 220px);
   overflow-y: scroll;
 }
 

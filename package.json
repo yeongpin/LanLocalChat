@@ -24,8 +24,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.6.2",
+    "dotenv": "^16.0.3",
     "nodemon": "^2.0.22",
-    "vite": "^4.5.9",
-    "dotenv": "^16.0.3"
+    "vite": "^4.5.9"
   }
 }

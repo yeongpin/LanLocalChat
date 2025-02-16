@@ -182,7 +182,7 @@
     grid-column: 1;
     border: 1px solid var(--border-color);
     padding: 20px;
-    height: calc(95vh - 150px);
+    height: calc(95vh - 220px);
     overflow-y: scroll;
     background-color: var(--bg-color);
     border-radius: 6px;
@@ -400,7 +400,7 @@
   @media (max-width: 768px) {
     .chat-messages {
       padding: 10px;
-      height: calc(98vh - 150px);
+      height: calc(98vh - 180px);
       width: 100%;
       max-width: 100%;
       margin: 0;

@@ -524,7 +524,7 @@ body {
   display: grid;
   grid-template-columns: 80px 1fr;
   gap: 20px;
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
 .chat-main {
@@ -537,7 +537,7 @@ body {
   padding: 20px;
   grid-template-rows: 1fr auto;
   max-width: 100%;
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
 .modal-overlay {
@@ -646,10 +646,11 @@ body {
     grid-template-columns: 50px 1fr;
     gap: 10px;
     padding: 10px 0px;
-    height: 98vh;
+    height: 97vh;
     width: 100%;
     max-width: 100%;
     margin: 0;
+    overflow: hidden !important;
   }
 
   .floating-container {
