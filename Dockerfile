@@ -5,10 +5,10 @@ WORKDIR /app
 
 # 複製項目文件
 COPY package*.json ./
+RUN npm install
 COPY . .
 
 # 安裝依賴並構建
-RUN npm install
 RUN npm run build
 
 # 運行階段
@@ -23,7 +23,8 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.env.example ./.env
 
 # 只安裝生產環境依賴
-RUN npm install --production
+RUN npm install --omit=dev
+RUN npm install dotenv
 
 # 創建上傳目錄
 RUN mkdir -p /app/server/uploads

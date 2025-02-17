@@ -5,6 +5,8 @@ services:
     build: .
     ports:
       - "${SERVER_PORT:-13050}:13050"
+    env_file:
+      - .env.example
     environment:
       - SERVER_PORT=${SERVER_PORT:-13050}
       - HOST=${HOST:-0.0.0.0}
