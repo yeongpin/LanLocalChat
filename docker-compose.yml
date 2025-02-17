@@ -4,15 +4,13 @@ services:
   lanchat:
     image: ghcr.io/yeongpin/lan-chat:main
     ports:
-      - "13050:13050"
-      - "5173:5173"
+      - "${SERVER_PORT:-13050}:13050"
     env_file:
       - .env.example
     environment:
-      - SERVER_PORT=13050
-      - HOST=0.0.0.0
-      - PUBLIC_PORT=5173
-      - PUBLIC_HOST=0.0.0.0
+      - SERVER_PORT=${SERVER_PORT:-13050}
+      - HOST=${HOST:-0.0.0.0}
+      - VITE_SERVER_PORT=${VITE_SERVER_PORT:-13050}
       - VITE_NAME_LIMIT=${VITE_NAME_LIMIT:-20}
       - VITE_MESSAGE_SALT=${VITE_MESSAGE_SALT:-your-secret-salt-key-here}
       - CLEANUP_INTERVAL=${CLEANUP_INTERVAL:-1h}
@@ -20,14 +18,9 @@ services:
       - UPLOADS_RETENTION=${UPLOADS_RETENTION:-1d}
     volumes:
       - uploads:/app/server/uploads
-    networks:
-      - lanchat-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - ./dist:/app/dist
+      - ./server:/app/server
+      - ./.env.example:/app/.env
 
 volumes:
-  uploads:
-
-networks:
-  lanchat-network:
-    driver: bridge 
+  uploads: 

@@ -65,11 +65,7 @@ function getUploadsDir() {
 const uploadDir = getUploadsDir();
 
 // 設置靜態文件目錄和跨域
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST'],
-  credentials: true
-}));
+app.use(cors());  // 允許所有跨域請求
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
