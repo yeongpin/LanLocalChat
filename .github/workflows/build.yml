@@ -36,71 +36,8 @@ jobs:
           name: lanchat-web
           path: dist/
 
-  build-server-linux:
-    name: Build Server (Linux)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Build
-        run: |
-          cd server
-          npm install
-          npm install -g pkg
-          pkg . --targets node18-linux-x64 --output ../build/lanchat-linux
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lanchat-linux
-          path: build/lanchat-linux*
-
-  build-server-windows:
-    name: Build Server (Windows)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Build
-        run: |
-          cd server
-          npm install
-          npm install -g pkg
-          pkg . --targets node18-win-x64 --output ../build/lanchat-win
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lanchat-windows
-          path: build/lanchat-win*
-
-  build-server-macos:
-    name: Build Server (MacOS)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Build
-        run: |
-          cd server
-          npm install
-          npm install -g pkg
-          pkg . --targets node18-darwin-x64 --output ../build/lanchat-mac
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lanchat-macos
-          path: build/lanchat-mac*
-
   create-release:
-    needs: [build-web, build-server-linux, build-server-windows, build-server-macos]
+    needs: [build-web]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     
@@ -114,17 +51,11 @@ jobs:
         run: |
           cd artifacts
           zip -r lanchat-web.zip lanchat-web/
-          zip -r lanchat-linux.zip lanchat-linux/
-          zip -r lanchat-windows.zip lanchat-windows/
-          zip -r lanchat-macos.zip lanchat-macos/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             artifacts/lanchat-web.zip
-            artifacts/lanchat-linux.zip
-            artifacts/lanchat-windows.zip
-            artifacts/lanchat-macos.zip
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
