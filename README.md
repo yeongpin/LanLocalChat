@@ -21,7 +21,7 @@
 
 ## 📝 項目介紹
 
-一個基於 Node.js 和 Vue.js 的局域網聊天應用，支持文字、圖片、視頻和文件傳輸。
+一個基於 Node.js 和 Vue.js 的局域網聊天應用，支持文字、圖片、視頻和文件傳輸。支持消息加密。支持Docker部署。支持nginx反向代理。
 
 ## ✨ 功能特點
 
@@ -118,7 +118,10 @@ server {
     }
 }
 ```
-
+## 🔄 使用Docker 部署
+```
+docker run -p 13050:13050 ghcr.io/yeongpin/lanlocalchat:main
+```
 
 ## 🛠 技術棧
 
@@ -159,6 +162,13 @@ server {
 </details>
 
 ## 📝 更新日誌
+
+### v1.0.13
+
+- 🔄 新增Dockerfile
+- 🔄 新增docker-compose.yml
+- 🔄 新增部署
+- 修復已知問題
 
 ### v1.0.12
 
