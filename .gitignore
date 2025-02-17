@@ -3,3 +3,5 @@ node_modules
 uploads
 package-lock.json
 dist
+server/uploads/*
+!server/uploads/.gitkeep
