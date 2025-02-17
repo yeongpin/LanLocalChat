@@ -3,9 +3,10 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
     cors: {
-        origin: "*",  // 允許所有來源
+        origin: ["http://localhost:13050", "http://127.0.0.1:13050", "http://0.0.0.0:13050"],
         methods: ["GET", "POST"],
-        credentials: true
+        credentials: true,
+        allowedHeaders: ["*"]
     }
 });
 const multer = require('multer');
@@ -64,8 +65,15 @@ function getUploadsDir() {
 // 獲取上傳目錄
 const uploadDir = getUploadsDir();
 
+// 設置 Express CORS
+app.use(cors({
+    origin: ["http://localhost:13050", "http://127.0.0.1:13050", "http://0.0.0.0:13050"],
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 // 設置靜態文件目錄和跨域
-app.use(cors());  // 允許所有跨域請求
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
