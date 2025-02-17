@@ -10,6 +10,8 @@ COPY . .
 
 # 安裝依賴並構建
 RUN npm run build
+RUN ls -la dist/
+RUN echo "構建完成，檢查 dist 目錄內容"
 
 # 運行階段
 FROM node:18-alpine
@@ -21,6 +23,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.env.example ./.env
+RUN echo "檢查 dist 目錄是否正確複製"
+RUN ls -la dist/
 
 # 只安裝生產環境依賴
 RUN npm install --omit=dev
@@ -33,4 +37,4 @@ RUN mkdir -p /app/server/uploads
 EXPOSE 13050
 
 # 啟動服務
-CMD ["npm", "start"] 
+CMD ["sh", "-c", "ls -la && npm start"]  # 啟動時顯示文件列表 
