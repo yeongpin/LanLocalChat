@@ -12,13 +12,12 @@ services:
       - HOST=${HOST:-0.0.0.0}
       - VITE_SERVER_PORT=${VITE_SERVER_PORT:-13050}
       - VITE_NAME_LIMIT=${VITE_NAME_LIMIT:-20}
-      - VITE_MESSAGE_SALT=your-custom-secret-salt-key
+      - VITE_MESSAGE_SALT=${VITE_MESSAGE_SALT:-mysecretkey123}
       - CLEANUP_INTERVAL=${CLEANUP_INTERVAL:-1h}
       - HISTORY_RETENTION=${HISTORY_RETENTION:-7d}
       - UPLOADS_RETENTION=${UPLOADS_RETENTION:-1d}
     volumes:
       - uploads:/app/server/uploads
-      - ./.env:/app/.env
 
 volumes:
   uploads: 

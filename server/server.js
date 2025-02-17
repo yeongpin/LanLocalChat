@@ -41,6 +41,7 @@ let roomPasswords = new Map(); // 存儲房間密碼
 let roomPassNeedIds = new Map(); // 存儲房間密碼需求標識
 
 const salt = process.env.VITE_MESSAGE_SALT || 'default-salt-value';
+console.log('Server starting with salt:', salt);
 
 // 獲取系統臨時目錄
 function getUploadsDir() {
@@ -473,7 +474,6 @@ io.on('connection', (socket) => {
 
     // 處理消息
     socket.on('message', (msg) => {
-        // 如果是文本消息，解密內容
         if (msg.type === 'text' && msg.content) {
             console.log('服務器收到加密消息:', msg.content);
             console.log('使用的 salt 值:', process.env.VITE_MESSAGE_SALT);
@@ -484,6 +484,7 @@ io.on('connection', (socket) => {
                 console.log('解密後:', msg.content);
                 if (!msg.content) {
                     console.error('解密結果為空');
+                    console.error('加密消息格式:', typeof msg.content, msg.content.length);
                 }
             } catch (error) {
                 console.error('解密錯誤:', error.message);
