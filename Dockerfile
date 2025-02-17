@@ -32,9 +32,12 @@ RUN npm install dotenv
 
 # 創建上傳目錄
 RUN mkdir -p /app/server/uploads
+RUN chown -R node:node /app
+
+USER node
 
 # 暴露端口
 EXPOSE 13050
 
 # 啟動服務
-CMD ["sh", "-c", "ls -la && npm start"]  # 啟動時顯示文件列表 
+CMD ["node", "server/server.js"] 
