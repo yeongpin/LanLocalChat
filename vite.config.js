@@ -9,13 +9,13 @@ const serverUrl = `http://${process.env.PUBLIC_HOST}:${process.env.SERVER_PORT}`
 export default defineConfig({
   plugins: [vue()],
   server: {
-    port: 13050,
-    host: true,
+    host: process.env.HOST || '0.0.0.0',
+    port: parseInt(process.env.PUBLIC_PORT) || 5173,
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:13050',
-        changeOrigin: true,
-        ws: true
+        target: serverUrl,
+        ws: true,
+        changeOrigin: true
       },
       '/upload': {
         target: serverUrl
@@ -24,8 +24,5 @@ export default defineConfig({
         target: serverUrl
       }
     }
-  },
-  build: {
-    outDir: 'dist'
   }
 }) 

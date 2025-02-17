@@ -181,7 +181,7 @@ export default {
     const roomId = params.get('chat_id');
     const isPrivate = params.get('private') === '1';
     
-    const serverUrl = `http://${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT || 13000}`;
+    const serverUrl = `http://${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT || 13050}`;
     
     // 確保服務器正在運行
     try {
