@@ -108,7 +108,7 @@ export default {
     }
   },
   created() {
-    console.log('ChatInput created with salt:', this.salt);
+    //console.log('ChatInput created with salt:', this.salt);
     if (!this.salt) {
       console.error('Warning: VITE_MESSAGE_SALT is not set');
     }
@@ -180,7 +180,7 @@ export default {
       if (hasMessage) {
         // 加密消息內容
         console.log('發送前的原始消息:', this.message.trim());
-        console.log('使用的 salt 值:', this.salt);
+        //console.log('使用的 salt 值:', this.salt);
         const encrypted = CryptoJS.AES.encrypt(this.message.trim(), this.salt);
         const encryptedContent = encrypted.toString();
         console.log('加密後:', encryptedContent);
