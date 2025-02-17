@@ -38,6 +38,7 @@ USER node
 
 # 暴露端口
 EXPOSE 13050
+EXPOSE 5173
 
 # 啟動服務
-CMD ["node", "server/server.js"] 
+CMD ["sh", "-c", "node server/server.js & npm run preview"] 
