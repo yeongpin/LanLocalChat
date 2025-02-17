@@ -18,9 +18,7 @@ services:
       - UPLOADS_RETENTION=${UPLOADS_RETENTION:-1d}
     volumes:
       - uploads:/app/server/uploads
-      - ./dist:/app/dist
-      - ./server:/app/server
-      - ./.env.example:/app/.env
+      - ./.env:/app/.env
 
 volumes:
   uploads: 

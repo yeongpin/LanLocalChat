@@ -173,9 +173,10 @@ export default {
       
       if (hasMessage) {
         // 加密消息內容
+        console.log('發送前的原始消息:', this.message.trim());
+        console.log('使用的 salt 值:', this.salt);
         const encrypted = CryptoJS.AES.encrypt(this.message.trim(), this.salt);
         const encryptedContent = encrypted.toString();
-        console.log('加密前:', this.message.trim());
         console.log('加密後:', encryptedContent);
         
         this.$emit('send-message', {

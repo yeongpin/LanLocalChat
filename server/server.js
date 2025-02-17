@@ -476,12 +476,18 @@ io.on('connection', (socket) => {
         // 如果是文本消息，解密內容
         if (msg.type === 'text' && msg.content) {
             console.log('服務器收到加密消息:', msg.content);
+            console.log('使用的 salt 值:', process.env.VITE_MESSAGE_SALT);
             try {
                 const decrypted = CryptoJS.AES.decrypt(msg.content, salt);
+                console.log('解密過程中的 salt:', salt);
                 msg.content = decrypted.toString(CryptoJS.enc.Utf8);
                 console.log('解密後:', msg.content);
+                if (!msg.content) {
+                    console.error('解密結果為空');
+                }
             } catch (error) {
-                console.error('Decryption error:', error);
+                console.error('解密錯誤:', error.message);
+                console.error('完整錯誤:', error);
             }
         }
 
