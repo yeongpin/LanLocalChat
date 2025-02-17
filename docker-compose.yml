@@ -3,10 +3,12 @@ version: '3.8'
 services:
   lanchat:
     image: ghcr.io/yeongpin/lan-chat:main
+    build:
+      context: .
+      args:
+        - VITE_MESSAGE_SALT=${VITE_MESSAGE_SALT:-mysecretkey123}
     ports:
       - "${SERVER_PORT:-13050}:13050"
-    env_file:
-      - .env
     environment:
       - SERVER_PORT=${SERVER_PORT:-13050}
       - HOST=${HOST:-0.0.0.0}

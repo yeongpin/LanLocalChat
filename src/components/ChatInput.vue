@@ -90,7 +90,7 @@ export default {
       mentionFilter: '',
       mentionPosition: { top: 0, left: 0 },
       currentMentionStart: -1,
-      salt: import.meta.env.VITE_MESSAGE_SALT || 'default-salt-value'
+      salt: import.meta.env.VITE_MESSAGE_SALT
     }
   },
   computed: {
@@ -105,6 +105,12 @@ export default {
         top: `${this.mentionPosition.top}px`,
         left: `${this.mentionPosition.left}px`
       }
+    }
+  },
+  created() {
+    console.log('ChatInput created with salt:', this.salt);
+    if (!this.salt) {
+      console.error('Warning: VITE_MESSAGE_SALT is not set');
     }
   },
   mounted() {
