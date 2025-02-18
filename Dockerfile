@@ -42,4 +42,5 @@ RUN mkdir -p /app/server/uploads
 EXPOSE 13050
 
 # 啟動服務
-CMD ["sh", "-c", "ls -la && npm start"]  # 啟動時顯示文件列表 
+# CMD ["sh", "-c", "ls -la && npm start"]  # 啟動時顯示文件列表 
+CMD ls -la && npm start
