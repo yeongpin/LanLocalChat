@@ -119,8 +119,12 @@ server {
 }
 ```
 ## 🔄 使用Docker 部署
-```
+```bash
+# 從 GitHub Container Registry 拉取
 docker run -p 13050:13050 ghcr.io/yeongpin/lanlocalchat:main
+
+# 或從 Docker Hub 拉取
+docker run -p 13050:13050 username/lanlocalchat:main
 ```
 
 ## 🛠 技術棧
@@ -162,6 +166,12 @@ docker run -p 13050:13050 ghcr.io/yeongpin/lanlocalchat:main
 </details>
 
 ## 📝 更新日誌
+
+### v1.0.14
+
+- 🔄 新增Docker Hub 部署
+- 🔄 新增GitHub Actions 部署
+- 修復已知問題
 
 ### v1.0.13
 
