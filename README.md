@@ -124,7 +124,7 @@ server {
 docker run -p 13050:13050 ghcr.io/yeongpin/lanlocalchat:main
 
 # 或從 Docker Hub 拉取
-docker run -p 13050:13050 username/lanlocalchat:main
+docker run -p 13050:13050 yeongpin/lanlocalchat:latest
 ```
 
 ## 🛠 技術棧
