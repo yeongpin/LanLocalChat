@@ -9,7 +9,7 @@ const serverUrl = `http://${process.env.PUBLIC_HOST}:${process.env.SERVER_PORT}`
 export default defineConfig({
   plugins: [vue()],
   define: {
-    'import.meta.env.VITE_MESSAGE_SALT': JSON.stringify(process.env.VITE_MESSAGE_SALT || 'mysecretkey123')
+    'import.meta.env.VITE_MESSAGE_SALT': JSON.stringify(process.env.VITE_MESSAGE_SALT || 'default-salt-value')
   },
   server: {
     host: process.env.HOST || '0.0.0.0',
