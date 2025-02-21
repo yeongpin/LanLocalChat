@@ -19,13 +19,13 @@
 </p>
 </div>
 
-## 📝 項目介紹
+## 📝 Project Introduction | 項目介紹
 
 一個基於 Node.js 和 Vue.js 的局域網聊天應用，支持文字、圖片、視頻和文件傳輸。支持消息加密。支持Docker部署。支持nginx反向代理。
 
-## ✨ 功能特點
+## ✨ Features | 功能特點
 
-| 功能 | 描述 |
+| Feature 功能 | Description 描述 |
 |------|------|
 | 💬 即時聊天 | 即時文字消息傳輸 |
 | 🌐 多語言 | 支持中文和英文界面 |
@@ -40,37 +40,37 @@
 | 😊 表情符號 | 支持發送表情 |
 | 🌓 深色模式 | 支持淺色/深色主題切換 |
 
-## 📂 項目結構
+## 📂 Project Structure | 項目結構
 
 /server - 後端服務器代碼<br>
 /public - 前端 Vue.js 應用<br>
-/uploads - 上傳文件存儲目錄<br>
+/server/uploads - 上傳文件存儲目錄<br>
 
 
-## 🚀 快速開始
+## 🚀 Quick Start | 快速開始
 ```
 git clone https://github.com/yeongpin/LanLocalChat.git
 cd LanLocalChat
 ```
 
-### 1️⃣ 安裝依賴
+### 1️⃣ Install Dependencies | 安裝依賴
 ```
 npm install
 ```
 
 
-### 2️⃣ 啟動服務器
+### 2️⃣ Start Server | 啟動服務器
 ```
 npm run server
 ```
 
 
-### 3️⃣ 啟動前端
+### 3️⃣ Start Frontend | 啟動前端
 ```
 npm run dev
 ```
 
-### 4️⃣ 修改 .env 文件
+### 4️⃣ Modify .env file | 修改 .env 文件
 請把 .env.example 複製一份，改名為 .env，並修改以下內容
 ```
 SERVER_PORT=13050
@@ -87,7 +87,7 @@ HISTORY_RETENTION=7d      # 歷史記錄保留時間
 UPLOADS_RETENTION=1d      # 上傳文件保留時間
 ```
 
-## 🌐 部署在服務器
+## 🌐 Deploy on Server | 部署在服務器
 ```
 npm run build:all
 ```
@@ -102,7 +102,7 @@ npm run build
 npm run server
 ```
 
-## 🌐 使用nginx 反向代理
+## 🌐 Use nginx | 使用nginx 反向代理
 ```
 server {
     listen 80;
@@ -120,7 +120,7 @@ server {
     }
 }
 ```
-## 🔄 使用Docker 部署
+## 🔄 Use Docker | 使用Docker 部署
 ```bash
 # 從 GitHub Container Registry 拉取
 docker run -p 13050:13050 ghcr.io/yeongpin/lanlocalchat:main
@@ -129,37 +129,38 @@ docker run -p 13050:13050 ghcr.io/yeongpin/lanlocalchat:main
 docker run -p 13050:13050 yeongpin/lanlocalchat:latest
 ```
 
-## 🛠 技術棧
+## 🛠️ Tech Stack | 技術棧
 
-| 類別 | 技術 |
+| Catergory 類別 | Technology 技術 |
 |------|------|
-| 後端 | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white) ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=flat-square&logo=socketdotio&logoColor=white) |
-| 前端 | ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white) ![Socket.IO Client](https://img.shields.io/badge/Socket.IO_Client-010101?style=flat-square&logo=socketdotio&logoColor=white) |
-| 工具 | ![Multer](https://img.shields.io/badge/Multer-FF6600?style=flat-square&logo=node.js&logoColor=white) |
+| Backend 後端 | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white) ![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white) ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=flat-square&logo=socketdotio&logoColor=white) |
+| Frontend 前端 | ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white) ![Socket.IO Client](https://img.shields.io/badge/Socket.IO_Client-010101?style=flat-square&logo=socketdotio&logoColor=white) |
+| Tool 工具 | ![Multer](https://img.shields.io/badge/Multer-FF6600?style=flat-square&logo=node.js&logoColor=white) |
 
-## 📖 使用指南
+## 📖 Usage Guide | 使用指南
 
-### 基本操作
-1. 啟動應用後，輸入您的用戶名進入聊天室
-2. 點擊左下角的附件按鈕可以發送文件、圖片或視頻
-3. 支持拖拽上傳文件
-4. 右側面板顯示在線用戶列表
+### Basic Operations | 基本操作
+1. Start the application | 啟動應用後，輸入您的用戶名進入聊天室
+2. Click the attachment button on the left | 點擊左下角的附件按鈕可以發送文件、圖片或視頻
+3. Support drag and drop to upload files | 支持拖拽上傳文件
+4. The right panel displays the online user list | 右側面板顯示在線用戶列表
 
-## ⚠️ 注意事項
+## ⚠️ Warning | 注意事項
 
-- 上傳文件大小限制為 50MB
-- 支持的圖片格式：jpg, png, gif
-- 支持的視頻格式：mp4, webm 
+- Support Image Format | 支持的圖片格式：jpg, png, gif ,webp 
+- Support Video Format | 支持的視頻格式：mp4, webm , mov
+- Support Audio Format | 支持的音頻格式：mp3, wav, ogg, m4a
+- Support File Format | 支持的文件格式：所有類型文件
 
-## 👥 貢獻者
+## 👥 Contributors | 貢獻者
 
 <a href="https://github.com/yeongpin">
   <img src="https://github.com/yeongpin.png" width="50" height="50" style="border-radius:50%"/>
 </a>
 
-## 🎨 預覽圖
+## 🎨 Preview | 預覽圖
 <details>
-<summary>預覽圖</summary>
+<summary>Preview | 預覽圖</summary>
 <p align="center">
 <img src="./images/send_2025-02-11_10-14-56.png" width="400" height="400"/>
 <img src="./images/mention_2025-02-11_10-15-27.png" width="400" height="400"/>
@@ -167,7 +168,7 @@ docker run -p 13050:13050 yeongpin/lanlocalchat:latest
 </p>
 </details>
 
-## 📝 更新日誌
+## 📝 Update Log | 更新日誌
 
 ### v1.0.15
 
