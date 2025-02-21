@@ -9,7 +9,8 @@
     "mention": "提及用户",
     "fileLimit": "最多只能同时上传3个文件",
     "uploadFailed": "文件上传失败",
-    "loadHistory": "加载历史消息"
+    "loadHistory": "加载历史消息",
+    "fileTooLarge": "文件大小超过限制（最大 {size}MB）"
   },
   "user": {
     "join": "加入了聊天室",

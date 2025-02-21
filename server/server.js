@@ -20,6 +20,7 @@ const readdir = promisify(fs.readdir);
 const os = require('os');
 const net = require('net');
 const CryptoJS = require('crypto-js');
+const busboy = require('busboy');
 dotenv.config();
 
 // 存儲最近的消息
@@ -160,7 +161,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+    limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE) || 500) * 1024 * 1024 } // MB limit
 });
 
 // 檢查並清理過期的用戶
@@ -667,14 +668,58 @@ io.on('connection', (socket) => {
 });
 
 // 文件上傳路由
-app.post('/upload', upload.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-    }
-    res.json({
-        filename: req.file.filename,
-        path: `/uploads/${req.file.filename}`
+app.post('/upload', (req, res) => {
+    const bb = busboy({ 
+        headers: req.headers,
+        limits: {
+            fileSize: (parseInt(process.env.MAX_FILE_SIZE) || 500) * 1024 * 1024
+        }
     });
+    let totalSize = 0;
+    let processedSize = 0;
+    let filePath = '';
+    let fileName = '';
+
+    bb.on('file', (name, file, info) => {
+        fileName = info.filename;
+        filePath = path.join(uploadDir, fileName);
+        const writeStream = fs.createWriteStream(filePath);
+
+        // 獲取文件大小
+        file.on('data', data => {
+            processedSize += data.length;
+            if (totalSize > 0) {
+                const progress = Math.round((processedSize / totalSize) * 100);
+                res.write(JSON.stringify({ progress }) + '\n');
+            }
+        });
+
+        file.pipe(writeStream);
+    });
+
+    bb.on('field', (name, val) => {
+        if (name === 'totalSize') {
+            totalSize = parseInt(val);
+            if (totalSize > (parseInt(process.env.MAX_FILE_SIZE) || 500) * 1024 * 1024) {
+                res.status(413).json({
+                    error: `File size exceeds limit of ${process.env.MAX_FILE_SIZE}MB`
+                });
+                req.unpipe(bb);
+                return;
+            }
+        }
+    });
+
+    bb.on('finish', () => {
+        res.write(JSON.stringify({
+            progress: 100,
+            filename: fileName,
+            path: `/uploads/${fileName}`
+        }) + '\n');
+        res.end();
+    });
+
+    req.pipe(bb);
 });
 
 // 所有請求都返回 index.html

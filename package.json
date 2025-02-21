@@ -1,6 +1,6 @@
 {
   "name": "lan-chat",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "LAN Chat Application",
   "main": "server/server.js",
   "scripts": {
@@ -13,10 +13,11 @@
   },
   "dependencies": {
     "axios": "^0.26.1",
+    "busboy": "^1.6.0",
     "cors": "^2.8.5",
+    "crypto-js": "^4.1.1",
     "dotenv": "^16.0.3",
     "express": "^4.17.1",
-    "crypto-js": "^4.1.1",
     "multer": "^1.4.4",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.4.1",

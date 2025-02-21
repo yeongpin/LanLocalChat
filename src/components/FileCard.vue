@@ -1,8 +1,14 @@
 <template>
   <div class="file-card">
     <div class="file-info">
+      <i :class="getFileIcon"></i>
       <span class="file-name">{{ file.name }}</span>
       <span class="file-size">{{ formatFileSize(file.size) }}</span>
+    </div>
+    <div class="progress-bar" v-if="progress > 0 && progress < 100">
+      <div class="progress" :style="{ width: progress + '%' }">
+        {{ progress }}%
+      </div>
     </div>
     <slot name="action">
       <a :href="file.path" download class="action-btn">
@@ -19,8 +25,46 @@ export default {
     file: {
       type: Object,
       required: true,
-      validator: (file) => {
+      validator: function(file) {
         return file.name && (file.size !== undefined) && (file.path !== undefined || file instanceof File);
+      }
+    },
+    progress: {
+      type: Number,
+      default: 0
+    }
+  },
+  computed: {
+    getFileIcon() {
+      const ext = this.file.name.split('.').pop().toLowerCase();
+      switch (ext) {
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+        case 'gif':
+          return 'fas fa-image';
+        case 'mp4':
+        case 'webm':
+        case 'mov':
+          return 'fas fa-video';
+        case 'mp3':
+        case 'wav':
+        case 'ogg':
+          return 'fas fa-music';
+        case 'pdf':
+          return 'fas fa-file-pdf';
+        case 'doc':
+        case 'docx':
+          return 'fas fa-file-word';
+        case 'xls':
+        case 'xlsx':
+          return 'fas fa-file-excel';
+        case 'zip':
+        case 'rar':
+        case '7z':
+          return 'fas fa-file-archive';
+        default:
+          return 'fas fa-file';
       }
     }
   },
@@ -46,6 +90,8 @@ export default {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    position: relative;
+    overflow: hidden;
   }
 
 .file-info {
@@ -83,5 +129,24 @@ export default {
 
 .action-btn:hover {
   opacity: 0.8;
+}
+
+.progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: var(--border-color);
+}
+
+.progress {
+  height: 100%;
+  background: var(--accent-color);
+  transition: width 0.3s ease;
+  text-align: center;
+  font-size: 11px;
+  line-height: 8px;
+  color: white;
 }
 </style> 

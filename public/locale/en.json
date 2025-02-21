@@ -9,7 +9,8 @@
     "mention": "Mention user",
     "fileLimit": "You can only upload 3 files at once",
     "uploadFailed": "File upload failed",
-    "loadHistory": "Load chat history"
+    "loadHistory": "Load chat history",
+    "fileTooLarge": "File size exceeds the limit (max {size}MB)"
   },
   "user": {
     "join": "joined the chat",

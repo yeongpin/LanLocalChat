@@ -6,6 +6,7 @@
           v-for="(file, index) in uploadingFiles"
           :key="index"
           :file="file"
+          :progress="uploadProgress[file.name] || 0"
         >
           <template #action>
             <button class="action-btn" @click="removeFile(index)">
@@ -56,6 +57,7 @@ import axios from 'axios';
 import FileCard from './FileCard.vue';
 import { t } from '../utils/i18n';
 import CryptoJS from 'crypto-js';
+import { ref, reactive } from 'vue';
 
 export default {
   name: 'ChatInput',
@@ -77,7 +79,8 @@ export default {
           attach: '附加文件',
           mention: '提及用戶',
           fileLimit: '最多只能同時上傳3個文件',
-          uploadFailed: '文件上傳失敗'
+          uploadFailed: '文件上傳失敗',
+          fileTooLarge: '文件大小超過限制，最大為 {size}MB'
         }
       })
     }
@@ -91,6 +94,12 @@ export default {
       mentionPosition: { top: 0, left: 0 },
       currentMentionStart: -1,
       salt: import.meta.env.VITE_MESSAGE_SALT
+    }
+  },
+  setup() {
+    const uploadProgress = reactive({});
+    return {
+      uploadProgress
     }
   },
   computed: {
@@ -121,10 +130,15 @@ export default {
     });
   },
   methods: {
-    t(path) {
+    t(path, params = {}) {
       try {
         const value = path.split('.').reduce((acc, part) => acc && acc[part], this.localeData);
-        return value || path;
+        if (!value) return path;
+        
+        // 替換參數
+        return value.replace(/\{(\w+)\}/g, (match, key) => {
+          return params[key] !== undefined ? params[key] : match;
+        });
       } catch (error) {
         console.warn(`Translation not found for: ${path}`);
         return path;
@@ -141,6 +155,15 @@ export default {
       const file = event.target.files[0];
       if (!file) return;
       
+      // 檢查文件大小
+      const maxSize = (parseInt(import.meta.env.MAX_FILE_SIZE) || 500) * 1024 * 1024; // MB to bytes
+      if (file.size > maxSize) {
+        const maxSizeMB = parseInt(import.meta.env.MAX_FILE_SIZE) || 500;
+        alert(this.t('chat.fileTooLarge', { size: maxSizeMB }));
+        this.$refs.fileInput.value = '';
+        return;
+      }
+      
       if (this.uploadingFiles.length >= 3) {
         alert(this.t('chat.fileLimit'));
         return;
@@ -148,6 +171,7 @@ export default {
       
       // 添加到待上傳文件列表
       this.uploadingFiles.push(file);
+      this.uploadProgress[file.name] = 0;
       
       // 清空文件輸入
       this.$refs.fileInput.value = '';
@@ -199,25 +223,81 @@ export default {
         for (const file of this.uploadingFiles) {
           const formData = new FormData();
           formData.append('file', file);
+          formData.append('totalSize', file.size.toString());
+          
           try {
-            const response = await axios.post('/upload', formData);
+            const response = await new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', '/upload');
+
+              xhr.onload = () => {
+                try {
+                  // 分割響應並過濾空行
+                  const responses = xhr.responseText.split('\n').filter(line => line.trim());
+                  // 獲取最後一個有效的 JSON 響應
+                  const lastResponse = responses[responses.length - 1];
+                  resolve(JSON.parse(lastResponse));
+                } catch (e) {
+                  console.error('Parse error:', e);
+                  console.log('Response text:', xhr.responseText);
+                  reject(e);
+                }
+              };
+
+              xhr.onerror = () => reject(new Error('Upload failed'));
+
+              xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                  const percentCompleted = Math.round((e.loaded * 100) / e.total);
+                  this.uploadProgress[file.name] = percentCompleted;
+                }
+              };
+
+              xhr.onreadystatechange = () => {
+                if (xhr.readyState === 3) {  // 接收到部分響應
+                  try {
+                    // 分割響應並過濾空行
+                    const responses = xhr.responseText.split('\n').filter(line => line.trim());
+                    // 處理每個進度更新
+                    responses.forEach(response => {
+                      if (!response.trim()) return;
+                      const data = JSON.parse(response);
+                      if (data.progress) {
+                        this.uploadProgress[file.name] = data.progress;
+                      }
+                    });
+                  } catch (e) {
+                    // 忽略部分響應的解析錯誤
+                  }
+                }
+              };
+
+              xhr.send(formData);
+            });
+
             this.$emit('send-message', {
               type: 'file',
               content: {
                 type: 'file',
                 name: file.name,
                 size: file.size,
-                path: response.data.path
+                path: response.path
               },
               timestamp: Date.now(),
               mentions: [],
               user: ''
             });
+            
+            // 上傳完成後清除進度
+            delete this.uploadProgress[file.name];
           } catch (error) {
             console.error('File upload failed:', error);
             alert(this.t('chat.uploadFailed'));
+            // 上傳失敗也清除進度
+            delete this.uploadProgress[file.name];
           }
         }
+        // 清空上傳文件列表
         this.uploadingFiles = [];
       }
     },
