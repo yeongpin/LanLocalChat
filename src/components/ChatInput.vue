@@ -426,9 +426,29 @@ export default {
               alert(this.t('chat.fileTooLarge', { size: maxSizeMB }));
               return;
             }
+
+            let uniqueFileName;
+            // Check if the file name is a default name
+            if (file.name.startsWith('image') && file.name.endsWith('.png')) {
+              // Generate unique filename for default names
+              const timestamp = new Date().getTime();
+              const randomStr = Math.random().toString(36).substring(2, 8);
+              const fileExtension = file.name.split('.').pop();
+              uniqueFileName = `pasted_${timestamp}_${randomStr}.${fileExtension}`;
+            } else {
+              // Use the original file name
+              uniqueFileName = file.name;
+            }
+
+            // Create new File object with the determined name
+            const uniqueFile = new File([file], uniqueFileName, {
+              type: file.type,
+              lastModified: file.lastModified,
+            });
+
             // add to uploading files list
-            this.uploadingFiles.push(file);
-            this.uploadProgress[file.name] = 0;
+            this.uploadingFiles.push(uniqueFile);
+            this.uploadProgress[uniqueFile.name] = 0;
           }
         }
       }
