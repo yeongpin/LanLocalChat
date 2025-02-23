@@ -41,7 +41,7 @@ let roomMessages = new Map(); // 存儲每個房間的消息
 let roomPasswords = new Map(); // 存儲房間密碼
 let roomPassNeedIds = new Map(); // 存儲房間密碼需求標識
 
-const salt = process.env.VITE_MESSAGE_SALT || 'default-salt-value';
+const salt = process.env.VITE_MESSAGE_SALT || 'mysecretkey123';
 console.log('Server starting with salt:', salt);
 
 // 獲取系統臨時目錄

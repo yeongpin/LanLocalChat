@@ -171,6 +171,12 @@ docker run -p 13050:13050 yeongpin/lanlocalchat:latest
 
 ## 📝 Update Log | 更新日誌
 
+### v1.0.16
+
+- 🔄 新增粘貼上傳文件
+- 🔄 修復文件上傳問題
+- 修復已知問題
+
 ### v1.0.15
 
 - 🔄 新增文件上傳進度顯示

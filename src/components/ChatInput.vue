@@ -127,6 +127,9 @@ export default {
       const textarea = this.$refs.messageInput;
       textarea.style.height = '36px';
       textarea.style.overflowY = 'hidden';
+      
+      // add paste event listener
+      textarea.addEventListener('paste', this.handlePaste);
     });
   },
   methods: {
@@ -407,6 +410,27 @@ export default {
         textarea.style.overflowY = 'auto';
       } else {
         textarea.style.overflowY = 'hidden';
+      }
+    },
+    async handlePaste(event) {
+      const items = (event.clipboardData || window.clipboardData).items;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file) {
+            // check file size
+            const maxSize = (parseInt(import.meta.env.MAX_FILE_SIZE) || 500) * 1024 * 1024; // MB to bytes
+            if (file.size > maxSize) {
+              const maxSizeMB = parseInt(import.meta.env.MAX_FILE_SIZE) || 500;
+              alert(this.t('chat.fileTooLarge', { size: maxSizeMB }));
+              return;
+            }
+            // add to uploading files list
+            this.uploadingFiles.push(file);
+            this.uploadProgress[file.name] = 0;
+          }
+        }
       }
     },
   }
