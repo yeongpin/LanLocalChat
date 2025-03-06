@@ -1,6 +1,6 @@
 {
   "name": "lan-chat",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "LAN Chat Application",
   "main": "server/server.js",
   "scripts": {

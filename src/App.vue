@@ -691,10 +691,6 @@ body {
   }
 }
 
-.leave-room {
-  background-color: var(--error-color);
-  color: white;
-}
 
 .leave-room:hover {
   background-color: var(--error-hover-color);
