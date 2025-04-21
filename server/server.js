@@ -637,6 +637,66 @@ io.on('connection', (socket) => {
         }
     });
 
+    // 處理加入語音通話
+    socket.on('voice-call-join', (data) => {
+        console.log(`用戶 ${data.user} 加入了語音通話 ${data.callId}`);
+        
+        // 廣播用戶加入通話的消息
+        socket.broadcast.emit('voice-call-join', {
+            callId: data.callId,
+            user: data.user,
+            timestamp: Date.now()
+        });
+    });
+
+    // 處理離開語音通話
+    socket.on('voice-call-leave', (data) => {
+        console.log(`用戶 ${data.user} 離開了語音通話 ${data.callId}`);
+        
+        // 廣播用戶離開通話的消息
+        socket.broadcast.emit('voice-call-leave', {
+            callId: data.callId,
+            user: data.user,
+            timestamp: Date.now()
+        });
+    });
+
+    // 處理結束語音通話
+    socket.on('voice-call-end', (data) => {
+        console.log(`用戶 ${data.user} 結束了語音通話 ${data.callId}`);
+        
+        // 廣播通話結束的消息
+        io.emit('voice-call-end', {
+            callId: data.callId,
+            user: data.user,
+            timestamp: Date.now()
+        });
+    });
+
+    // 處理靜音狀態變化
+    socket.on('voice-call-mute', (data) => {
+        console.log(`用戶 ${data.user} ${data.muted ? '已靜音' : '取消靜音'}`);
+        
+        // 廣播靜音狀態變化
+        socket.broadcast.emit('voice-call-mute', {
+            callId: data.callId,
+            user: data.user,
+            muted: data.muted,
+            timestamp: Date.now()
+        });
+    });
+
+    // 處理音頻數據
+    socket.on('voice-call-audio', (data) => {
+        // 轉發音頻數據給其他參與者
+        socket.broadcast.emit('voice-call-audio', {
+            callId: data.callId,
+            user: data.user,
+            data: data.data,
+            timestamp: data.timestamp
+        });
+    });
+
     // 處理創建房間
     socket.on('createRoom', (data, callback) => {
         const { roomId, password, passNeedId } = data;

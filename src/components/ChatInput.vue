@@ -22,6 +22,9 @@
         <button class="attach-btn" @click="handleAttachClick" :title="t('chat.attach')">
           <i class="fas fa-paperclip"></i>
         </button>
+        <button class="voice-call-btn" @click="startVoiceCall" :title="t('chat.voiceCall')">
+          <i class="fas fa-phone-alt"></i>
+        </button>
         <button class="mention-btn" @click="insertMentionSymbol" :title="t('chat.mention')">
           <i class="fas fa-at"></i>
         </button>
@@ -453,6 +456,242 @@ export default {
         }
       }
     },
+    startVoiceCall() {
+      // 生成唯一的通話ID
+      const callId = 'call-' + Math.random().toString(36).substring(2, 15);
+      
+      // 創建通話消息
+      const callMessage = {
+        type: 'voice-call',
+        content: {
+          callId: callId,
+          startTime: Date.now(),
+          participants: [this.$root.$data.username || '未知用戶'],
+          duration: 0,
+          active: true,
+          creator: this.$root.$data.username || '未知用戶'
+        },
+        user: this.$root.$data.username || '未知用戶',
+        timestamp: Date.now()
+      };
+      
+      // 使用 socket 發送通話消息，確保所有用戶都能收到
+      this.$root.socket.emit('message', callMessage);
+      
+      // 添加系統消息
+      const systemMessage = {
+        type: 'system',
+        content: `${this.$root.$data.username || '未知用戶'} 創建了語音通話`,
+        timestamp: Date.now()
+      };
+      this.$root.socket.emit('message', systemMessage);
+      
+      // 自動加入通話
+      setTimeout(() => {
+        // 獲取麥克風權限並加入通話
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          .then(stream => {
+            // 創建音頻上下文
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            
+            // 創建音頻處理節點
+            const processor = audioContext.createScriptProcessor(1024, 1, 1);
+            
+            // 連接節點
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+            
+            // 處理音頻數據
+            processor.onaudioprocess = (e) => {
+              // 這裡可以處理音頻數據，例如發送到服務器
+              const inputData = e.inputBuffer.getChannelData(0);
+              
+              // 創建一個新的 Float32Array 來存儲音頻數據
+              const audioData = new Float32Array(inputData.length);
+              audioData.set(inputData);
+              
+              // 這裡可以添加發送音頻數據的代碼
+              // 例如使用 WebSocket 發送
+            };
+            
+            // 添加系統消息
+            const joinMessage = {
+              type: 'system',
+              content: `${this.$root.$data.username || '未知用戶'} 加入了語音通話`,
+              timestamp: Date.now()
+            };
+            this.$root.socket.emit('message', joinMessage);
+            
+            // 發送加入通話事件
+            this.$emit('join-voice-call', {
+              callId: callId,
+              stream: stream
+            });
+            
+            // 通知 MessageList 組件設置活動通話 ID
+            const messageList = this.$parent.$refs.messageList;
+            if (messageList) {
+              messageList.activeCallId = callId;
+              messageList.localStream = stream;
+              messageList.setupAudioProcessing(stream);
+            }
+          })
+          .catch(err => {
+            console.error('無法獲取麥克風權限:', err);
+            alert('無法獲取麥克風權限，請確保您的瀏覽器有權限訪問麥克風。');
+          });
+      }, 500);
+    },
+    formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+    handleKeydown(e) {
+      if (e.shiftKey && e.key === 'Enter') {
+        e.preventDefault();
+        const textarea = this.$refs.messageInput;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const value = textarea.value;
+        this.message = value.substring(0, start) + '\n' + value.substring(end);
+        this.$nextTick(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+          this.adjustHeight();
+          textarea.scrollTop = textarea.scrollHeight;
+        });
+      }
+    },
+    insertMentionSymbol() {
+      const textarea = this.$refs.messageInput;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      this.message = this.message.slice(0, start) + '@' + this.message.slice(end);
+      this.currentMentionStart = start;
+      
+      this.$nextTick(() => {
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
+        this.showMentionList(true);
+      });
+    },
+    showMentionList(force = false) {
+      if (!this.users || this.users.length === 0) return;
+      if (!force && !this.mentionFilter && this.users.length > 10) return;
+
+      const textarea = this.$refs.messageInput;
+      const pos = textarea.getBoundingClientRect();
+      
+      // 計算文本框的行高
+      const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight);
+      
+      // 獲取光標位置
+      const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+      const lines = textBeforeCursor.split('\n');
+      const currentLine = lines.length;
+      
+      // 計算垂直位置
+      const verticalOffset = (currentLine - 1) * lineHeight;
+      
+      // 計算選單的預計高度（每個項目 36px + padding 和 border）
+      const estimatedHeight = Math.min(this.filteredUsers.length * 36 + 16, 200);
+      
+      this.mentionPosition = {
+        top: pos.top - estimatedHeight + 8, // 顯示在輸入框上方
+        left: pos.left
+      };
+      
+      this.showMentions = true;
+      this.mentionFilter = '';
+    },
+    onInput(event) {
+      this.adjustHeight();
+      
+      const text = event.target.value;
+      const pos = event.target.selectionStart;
+      
+      if (text[pos - 1] === '@' && (pos === 1 || text[pos - 2] === ' ' || text[pos - 2] === '\n')) {
+        this.currentMentionStart = pos - 1;
+        this.showMentionList(true);
+      } else if (this.currentMentionStart >= 0) {
+        const mentionText = text.slice(this.currentMentionStart + 1, pos);
+        if (mentionText.includes(' ') || mentionText.includes('\n')) {
+          this.showMentions = false;
+          this.currentMentionStart = -1;
+        } else {
+          this.mentionFilter = mentionText;
+          this.showMentions = true;
+          this.showMentionList();
+        }
+      }
+    },
+    selectMention(user) {
+      // 檢查 user 是否是對象
+      const username = typeof user === 'object' ? user.user : user;
+      const before = this.message.slice(0, this.currentMentionStart);
+      const after = this.message.slice(this.currentMentionStart + 1 + (this.mentionFilter?.length || 0));
+      this.message = before + '@' + username + ' ' + after;
+      
+      this.showMentions = false;
+      this.currentMentionStart = -1;
+      this.$refs.messageInput.focus();
+    },
+    adjustHeight() {
+      const textarea = this.$refs.messageInput;
+      textarea.style.height = '36px';
+      const scrollHeight = textarea.scrollHeight;
+      const newHeight = Math.min(Math.max(scrollHeight, 36), 60);
+      textarea.style.height = `${newHeight}px`;
+      if (scrollHeight > 60) {
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.overflowY = 'hidden';
+      }
+    },
+    async handlePaste(event) {
+      const items = (event.clipboardData || window.clipboardData).items;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file) {
+            // check file size
+            const maxSize = (parseInt(import.meta.env.MAX_FILE_SIZE) || 500) * 1024 * 1024; // MB to bytes
+            if (file.size > maxSize) {
+              const maxSizeMB = parseInt(import.meta.env.MAX_FILE_SIZE) || 500;
+              alert(this.t('chat.fileTooLarge', { size: maxSizeMB }));
+              return;
+            }
+
+            let uniqueFileName;
+            // Check if the file name is a default name
+            if (file.name.startsWith('image') && file.name.endsWith('.png')) {
+              // Generate unique filename for default names
+              const timestamp = new Date().getTime();
+              const randomStr = Math.random().toString(36).substring(2, 8);
+              const fileExtension = file.name.split('.').pop();
+              uniqueFileName = `pasted_${timestamp}_${randomStr}.${fileExtension}`;
+            } else {
+              // Use the original file name
+              uniqueFileName = file.name;
+            }
+
+            // Create new File object with the determined name
+            const uniqueFile = new File([file], uniqueFileName, {
+              type: file.type,
+              lastModified: file.lastModified,
+            });
+
+            // add to uploading files list
+            this.uploadingFiles.push(uniqueFile);
+            this.uploadProgress[uniqueFile.name] = 0;
+          }
+        }
+      }
+    }
   }
 }
 </script>
@@ -659,6 +898,20 @@ export default {
 }
 
 .mention-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--hover-color);
+}
+
+.voice-call-btn {
+  padding: 8px 12px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--accent-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.voice-call-btn:hover {
   background-color: var(--hover-color);
 }
 </style> 

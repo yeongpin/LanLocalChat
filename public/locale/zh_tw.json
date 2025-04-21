@@ -10,7 +10,8 @@
     "fileLimit": "最多只能同時上傳3個文件",
     "uploadFailed": "文件上傳失敗",
     "loadHistory": "載入歷史消息",
-    "fileTooLarge": "文件大小超過限制（最大 {size}MB）"
+    "fileTooLarge": "文件大小超過限制（最大 {size}MB）",
+    "voiceCall": "發起語音通話"
   },
   "user": {
     "join": "加入了聊天室",

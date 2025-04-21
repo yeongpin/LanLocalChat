@@ -47,9 +47,16 @@
     </div>
     <div class="chat-main">
       <message-list 
+        ref="messageList"
         :messages="messages"
         @load-history="loadHistory" 
         :localeData="localeData"
+        @join-voice-call="handleJoinVoiceCall"
+        @leave-voice-call="handleLeaveVoiceCall"
+        @end-voice-call="handleEndVoiceCall"
+        @mute-voice-call="handleMuteVoiceCall"
+        @send-message="handleSendMessage"
+        @audio-data="handleAudioData"
       />
       <div class="desktop-user-list">
         <user-list 
@@ -282,8 +289,15 @@ export default {
       this.showLanguageMenu = !this.showLanguageMenu;
     },
     setupSocketListeners() {
-      // 清理舊的監聽器
-      this.socket.removeAllListeners();
+      // 清除可能存在的重複監聽器
+      this.socket.off('chat-message');
+      this.socket.off('user-joined');
+      this.socket.off('user-left');
+      this.socket.off('user-rename');
+      this.socket.off('voice-call-join');
+      this.socket.off('voice-call-leave');
+      this.socket.off('voice-call-end');
+      this.socket.off('voice-call-mute');
       
       // 處理錯誤消息
       this.socket.on('error', (error) => {
@@ -372,6 +386,90 @@ export default {
         this.playNotificationSound();
         this.showNotification(data);
       });
+
+      // 監聽用戶加入語音通話
+      this.socket.on('voice-call-join', (data) => {
+        console.log('收到用戶加入語音通話事件:', data);
+        
+        // 尋找對應的通話消息
+        const callMessage = this.messages.find(m => 
+          m.type === 'voice-call' && m.content.callId === data.callId
+        );
+        
+        if (callMessage) {
+          // 更新參與者列表
+          if (!callMessage.content.participants.includes(data.user)) {
+            callMessage.content.participants.push(data.user);
+          }
+          
+          // 添加系統消息
+          this.messages.push({
+            type: 'system',
+            content: `${data.user} 加入了語音通話`,
+            timestamp: data.timestamp
+          });
+        }
+      });
+      
+      // 監聽用戶離開語音通話
+      this.socket.on('voice-call-leave', (data) => {
+        console.log('收到用戶離開語音通話事件:', data);
+        
+        // 尋找對應的通話消息
+        const callMessage = this.messages.find(m => 
+          m.type === 'voice-call' && m.content.callId === data.callId
+        );
+        
+        if (callMessage) {
+          // 更新參與者列表
+          const index = callMessage.content.participants.indexOf(data.user);
+          if (index !== -1) {
+            callMessage.content.participants.splice(index, 1);
+          }
+          
+          // 添加系統消息
+          this.messages.push({
+            type: 'system',
+            content: `${data.user} 離開了語音通話`,
+            timestamp: data.timestamp
+          });
+        }
+      });
+      
+      // 監聽語音通話結束
+      this.socket.on('voice-call-end', (data) => {
+        console.log('收到語音通話結束事件:', data);
+        
+        // 尋找對應的通話消息
+        const callMessage = this.messages.find(m => 
+          m.type === 'voice-call' && m.content.callId === data.callId
+        );
+        
+        if (callMessage) {
+          // 標記通話為已結束
+          callMessage.content.active = false;
+          
+          // 如果自己在通話中，強制離開
+          if (this.$refs.messageList && this.$refs.messageList.activeCallId === data.callId) {
+            this.$refs.messageList.leaveCall(data.callId);
+          }
+          
+          // 添加系統消息
+          this.messages.push({
+            type: 'system',
+            content: `${data.user} 結束了語音通話`,
+            timestamp: data.timestamp
+          });
+        }
+      });
+
+      // 監聽音頻數據
+      this.socket.on('voice-call-audio', (data) => {
+        // 將音頻數據轉發給 MessageList 組件
+        if (this.$refs.messageList) {
+          this.$refs.messageList.handleAudioData(data);
+        }
+      });
     },
     async showNotification(data) {
       if (!("Notification" in window)) return;
@@ -406,6 +504,22 @@ export default {
       this.showNameForm = false;
     },
     handleSendMessage(message) {
+      // 如果是語音通話消息，直接添加到本地消息列表
+      if (message.type === 'voice-call') {
+        this.messages.push(message);
+        
+        // 如果是創建通話的消息，自動設置為活動通話
+        if (message.user === this.username) {
+          setTimeout(() => {
+            if (this.$refs.messageList) {
+              this.$refs.messageList.activeCallId = message.content.callId;
+            }
+          }, 600); // 稍微延遲，確保消息已經渲染
+        }
+        
+        return;
+      }
+      
       this.socket.emit('message', message);
     },
     showNameEditor() {
@@ -503,6 +617,52 @@ export default {
     },
     toggleMobileUserList() {
       this.showMobileUserList = !this.showMobileUserList;
+    },
+    handleJoinVoiceCall(data) {
+      console.log('用戶加入語音通話:', data);
+      
+      // 發送加入通話事件
+      this.socket.emit('voice-call-join', {
+        callId: data.callId,
+        user: this.username
+      });
+    },
+    handleLeaveVoiceCall(data) {
+      console.log('用戶離開語音通話:', data);
+      
+      // 發送離開通話事件
+      this.socket.emit('voice-call-leave', {
+        callId: data.callId,
+        user: this.username
+      });
+    },
+    handleEndVoiceCall(data) {
+      console.log('用戶結束語音通話:', data);
+      
+      // 發送結束通話事件
+      this.socket.emit('voice-call-end', {
+        callId: data.callId,
+        user: this.username
+      });
+    },
+    handleMuteVoiceCall(data) {
+      console.log('用戶靜音狀態變化:', data);
+      
+      // 發送靜音狀態變化事件
+      this.socket.emit('voice-call-mute', {
+        callId: data.callId,
+        user: this.username,
+        muted: data.muted
+      });
+    },
+    handleAudioData(data) {
+      // 發送音頻數據
+      this.socket.emit('voice-call-audio', {
+        callId: data.callId,
+        user: this.username,
+        data: data.data,
+        timestamp: data.timestamp
+      });
     },
   }
 };
