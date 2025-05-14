@@ -196,7 +196,7 @@ export default {
         query: {
           chat_id: params.get('chat_id') || 'public',
           private: isPrivate ? '1' : '0',
-          pass: params.get('pass'),
+          pass: params.has('pass') ? params.get('pass') : '',
           pass_need: params.get('pass_need'),
           creating: params.get('creating')
         },
